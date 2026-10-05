@@ -26,6 +26,12 @@ create_generated_clock -name opl4_clk_eng -source [get_ports {clkin}] -master_cl
 set_clock_groups -asynchronous -group [get_clocks {clkin video_clk_135}] -group [get_clocks {hdmi_audio_clk}] -group [get_clocks {main_clk opl4_clk54 opl4_clk_eng}]
 set_clock_groups -asynchronous -group [get_clocks {cpu_clk}] -group [get_clocks {clkin video_clk_135 hdmi_audio_clk main_clk opl4_clk54 opl4_clk_eng}]
 
+// MoonSound fork: the HDMI reset (sms_reset_sync) is now synchronized to the
+// 27 MHz pixel clock instead of Franky's asynchronous 54 MHz clock. Its release
+// into the OSER10 serializers (FCLK = 135 MHz) was never timed before; keep it
+// that way rather than create a 27 MHz -> 135 MHz recovery check.
+set_false_path -from [get_regs {sms_reset_sync*}] -to [get_clocks {video_clk_135}]
+
 // MoonSound FM: the Gray-code crossing of the OPL3 host FIFO (afifo) is
 // designed not to meet hold between clk54 and clk_eng, and the first stage of
 // its 2FF synchronizers and of its reset synchronizer accepts metastability by
