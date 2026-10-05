@@ -1,0 +1,5 @@
+# MoonSound fork: the bitstreams are stored byte for byte (the .fs with the
+# CRLF line ends Gowin writes), so that a checkout on any system has the same
+# checksum as the delivered file
+*.fs -text
+*.bin binary

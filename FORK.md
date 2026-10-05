@@ -180,11 +180,33 @@ the summary of the IDE can show no TNS while a clock-domain crossing fails.
 
 ```
 make init                                 # submodules (jt49, jt51, jtopl, Nextor)
+make reprogram                            # the bitstream in the repository to flash 0x000000, no build
 make                                      # Gowin gw_sh -> impl/pnr/new-juice.fs
-make program                              # bitstream to flash 0x000000
+make rebuild                              # always runs Gowin, even if nothing changed
+make program                              # build if needed, then bitstream to flash 0x000000
 make roms                                 # New Juice's Nextor and FM-PAC + SFG-01, as before
 make yrw801 YRW801=/path/to/yrw801.rom    # your own YRW801 image to flash 0x200000
 ```
+
+The repository carries a built bitstream, as New Juice does:
+`impl/pnr/new-juice.fs` and `.bin` are this fork's bitstream for the board
+test (Gowin 1.9.12.03, Place 1 / Route 2, sources of `bb90bcc` plus the route
+option of `16a9664`; MD5 of the `.fs` `c2ef5122bdc7ca1033023a451b08b045`, of
+the `.bin` `d7c70facd0137f651f9d25352f46c779`). `.gitattributes` keeps both
+byte for byte, so a checkout gives exactly those checksums. The other files
+under `impl/` (reports, synthesis netlist) are still New Juice's from
+upstream until the next build overwrites them.
+
+- `make reprogram` writes that file as it is, without building: only
+  openFPGALoader is needed. This is what New Juice's README tells a new user
+  to run, and in this fork it writes the MoonSound bitstream, not New Juice's.
+- `make` and `make program` run Gowin only when a source file is newer than
+  `impl/pnr/new-juice.fs` (after a clone the file dates decide), and they ask
+  for the Gowin IDE even when nothing has to be built.
+- `make rebuild` always runs Gowin and overwrites `impl/pnr/`, versioned
+  bitstream included. A rebuild of the same sources gives a different `.fs`
+  (its header carries the build time), and another Gowin version places and
+  routes it differently, so check its timing (see above) before committing it.
 
 `make` needs the Gowin IDE (`GOWIN_IDE=...` or `GW_SH=...`) and the
 programming targets need openFPGALoader, as in New Juice. Without the
