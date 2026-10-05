@@ -504,13 +504,14 @@ module tb_nj_board;
         io_rd(16'h00C4);
         ok(rd_driven && (rdv & 8'hE0) == 8'h00, "IN C4h: la placa contesta, sin flags de timer");
         // New Juice releases the bus through its debounced view of /RD, so
-        // the release lags /RD by its debounce delay; the MoonSound must not
-        // add much to that (its decode is registered twice at 54 MHz)
+        // the release lags /RD by its debounce delay; the MoonSound gates its
+        // registered decode with that same /RD and /IORQ, so it must let go
+        // at the same time (within one 108 MHz clock and the phase of /RD)
         release_time(16'h00C4, rel_ours);
         release_time(16'h00FE, rel_nj);
         $display("         suelta D0-D7 y /BUSDIR %0.0f ns tras subir /RD en C4h (New Juice en su puerto FEh: %0.0f ns)", rel_ours, rel_nj);
-        ok(s_busdir_n === 1'b1 && !cart_drives_d && rel_ours < rel_nj + 60.0 && rel_ours < 300.0,
-           "al acabar la lectura suelta el bus y /BUSDIR, como mucho 60 ns despues que New Juice en sus puertos");
+        ok(s_busdir_n === 1'b1 && !cart_drives_d && rel_ours < rel_nj + 15.0 && rel_ours < 300.0,
+           "al acabar la lectura suelta el bus y /BUSDIR a la vez que New Juice en sus puertos (+-15 ns)");
         fm_w(0, 8'h20, 8'h5A); io_wr(16'h00C4, 8'h20); io_rd(16'h00C5);
         ok(rdv === 8'h5A, "registro FM 020h: se relee 5Ah por C5h");
         fm_w(1, 8'h21, 8'hA5); io_wr(16'h00C6, 8'h21); io_rd(16'h00C7);

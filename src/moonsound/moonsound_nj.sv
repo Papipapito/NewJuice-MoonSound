@@ -255,7 +255,11 @@ module moonsound_nj #(
             ck_edges <= ck_edges + 7'd1;
     end
     wire bus_ok = ck_alive & bus_reset_n;
-    assign rd_active = any_rd & bus_ok;
+    // any_rd comes through two 54 MHz register stages, so on its own it would
+    // let go of the bus (D0-D7, BUSDIR, DATADIR) 28-45 ns after New Juice's
+    // own ports. Gating it with /RD and /IORQ (main_clk domain, the same ones
+    // the New Juice ports decode) releases the bus at the same time as theirs.
+    assign rd_active = any_rd & bus_ok & ~rd_n & ~iorq_n;
     assign wait_n    = opl4pcm_wait_n | ~bus_ok;
     assign int_n     = opl4fm_int_n   | ~bus_ok;
 
