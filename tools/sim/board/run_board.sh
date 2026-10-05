@@ -10,8 +10,11 @@ cd "$(dirname "$0")"
 R=$(cd ../../.. && pwd)
 GW=${GOWIN_SIMLIB:-/mnt/c/Gowin/Gowin_V1.9.12.03_x64/IDE/simlib/gw2a/prim_sim.v}
 SV2V=${SV2V:-$(command -v sv2v || echo /home/albert/bin/sv2v)}
+[ -f "$GW" ] || { echo "Gowin simulation library not found: $GW (set GOWIN_SIMLIB)"; exit 2; }
 MODE=${1:-main}
 mkdir -p build
+# nothing from an earlier run is reused: a failed step stops the bench
+rm -f build/nj_sv2v.v build/nj_pins.v build/sd_reader.sv
 
 # ---- 1. the design as listed in new-juice.gprj, converted to plain Verilog ----
 FILES=$(grep -o 'path="[^"]*"' "$R/new-juice.gprj" | sed 's/path="//;s/"//' | grep -E '\.(v|sv)$')
@@ -45,22 +48,36 @@ echo "sv2v OK: $(grep -c '^module ' build/nj_sv2v.v) modules"
 python3 gen_pins_nj.py "$R/src/top.v" "$R/src/top.cst" build/nj_pins.v
 
 # ---- 4. compile and run ----
+# The old .vvp and .log are removed first and a compile error stops the
+# bench, so an older simulation can never run and pass in its place.
 comp() {   # comp <name> [iverilog options]
-    local name=$1; shift
+    local name=$1 rc=0; shift
+    rm -f build/$name.vvp build/$name.log
     iverilog -g2012 -I . -s tb_nj_board "$@" -o build/$name.vvp \
         tb_nj_board.v wt20x_board.v ../common/sdram_model.v ../common/spi_flash_model.v \
-        build/nj_pins.v build/nj_sv2v.v "$GW" 2>&1 | grep -v 'Pruning\|expects 1 bits\|timescale\|Static variable' || true
+        build/nj_pins.v build/nj_sv2v.v "$GW" > build/$name.comp 2>&1 || rc=$?
+    grep -v 'Pruning\|expects 1 bits\|timescale\|Static variable' build/$name.comp || true
+    if [ $rc != 0 ] || [ ! -s build/$name.vvp ]; then
+        rm -f build/$name.vvp
+        echo "ERROR: iverilog failed for $name (build/$name.comp)"; exit 1
+    fi
 }
 run() { stdbuf -oL vvp -n build/$1.vvp > build/$1.log 2>&1 || true; }
 show() { echo "################ $1 ################"; grep -a -v "^VCD\|WARNING: .*prim_sim" build/$1.log | tail -150; }
+verdict() {   # verdict <name>...: exit status 0 only if every log says PASS
+    local n=0 npass=0 failed=""
+    for name in "$@"; do
+        n=$((n + 1))
+        if grep -a -q "RESULTADO: PASS" build/$name.log; then npass=$((npass + 1)); else failed="$failed $name"; fi
+    done
+    echo "run_board: $npass/$n PASS${failed:+ (failed:$failed)}"
+    [ "$npass" = "$n" ]
+}
 case "$MODE" in
-    main)  comp main; run main; show main
-           grep -q "RESULTADO: PASS" build/main.log ;;
-    blank) comp blank -Ptb_nj_board.BLANK=1; run blank; show blank
-           grep -q "RESULTADO: PASS" build/blank.log ;;
+    main)  comp main; run main; show main; verdict main ;;
+    blank) comp blank -Ptb_nj_board.BLANK=1; run blank; show blank; verdict blank ;;
     all)   comp main; comp blank -Ptb_nj_board.BLANK=1
            run main & run blank & wait
-           show main; show blank
-           grep -q "RESULTADO: PASS" build/main.log && grep -q "RESULTADO: PASS" build/blank.log ;;
+           show main; show blank; verdict main blank ;;
     *)     echo "unknown mode: $MODE"; exit 2 ;;
 esac

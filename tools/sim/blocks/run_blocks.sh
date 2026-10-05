@@ -17,12 +17,20 @@ WHAT=${1:-all}
 ARB_SRC="tb_arb.v ../common/sdram_model.v $S/sdram.v $S/sdram_command_adapter.v $M/nj_sdram_arb.v $M/wave_sdram.v $M/opl4_pcm.v $M/opl4wave/ymf278b_gowin.v"
 MAP_SRC="tb_map.v ../common/sdram_model.v $S/sdram.v $S/sdram_command_adapter.v $S/sdram_mapper.v $M/nj_sdram_arb.v $M/wave_sdram.v $M/opl4_pcm.v $M/opl4wave/ymf278b_gowin.v"
 
+# Every bench is compiled afresh: its old .vvp and .log are removed first, so
+# a compile error can never leave an older simulation to run and pass.
 comp() {   # comp <tag> <top> <sources> [-P...]
     local tag=$1 top=$2 src=$3; shift 3
-    iverilog -g2012 -o build/$tag.vvp -s $top "$@" $src 2>&1 | grep -v "Pruning\|expects\|warning: Some\|sorry\|timescale" | head -20 || true
+    rm -f build/$tag.vvp build/$tag.log
+    if ! iverilog -g2012 -o build/$tag.vvp -s $top "$@" $src > build/$tag.comp 2>&1; then
+        echo "ERROR: iverilog failed for $tag" >> build/$tag.comp; rm -f build/$tag.vvp
+    fi
+    grep -v "Pruning\|expects\|warning: Some\|sorry\|timescale" build/$tag.comp | head -20
+    [ -s build/$tag.vvp ]
 }
 run() { stdbuf -oL vvp -n build/$1.vvp > build/$1.log 2>&1 || true; }
-bg() { local tag=$1; shift; ( comp $tag "$@" && run $tag ) & }
+TAGS=""
+bg() { local tag=$1; shift; TAGS="$TAGS $tag"; ( comp $tag "$@" && run $tag ) & }
 
 TZ358=279.365; TZ537=186.243; TZ716=139.683
 if [ "$WHAT" = arb ] || [ "$WHAT" = all ]; then
@@ -54,7 +62,21 @@ if [ "$WHAT" = opll ] || [ "$WHAT" = all ]; then
     bg opll        tb_opll "tb_opll.v $S/jtopl/hdl/*.v" -DSIMULATION
 fi
 wait
-for f in build/*.log; do
-    echo "=== $f"
-    grep -a -E "CONFIG|AUDIO|MOTOR|LATENC|ARB |CPU |SDRAM|DATOS|HIST|Z80 parado|refrescos|caducadas|\[ok\]|\[FAIL\]|RESULTADO|ERROR|BAD|DIN/WS|I2S:" "$f" | head -60 | sed 's/^/  /'
+[ -n "$TAGS" ] || { echo "unknown bench: $WHAT"; exit 2; }
+n=0; npass=0; failed=""
+for tag in $TAGS; do
+    n=$((n + 1))
+    echo "=== $tag"
+    if [ ! -s build/$tag.vvp ]; then
+        echo "  ERROR: no simulation (compile failed, see build/$tag.comp)"
+        failed="$failed $tag"; continue
+    fi
+    grep -a -E "CONFIG|AUDIO|MOTOR|LATENC|ARB |CPU |SDRAM|DATOS|HIST|Z80 parado|refrescos|caducadas|\[ok\]|\[FAIL\]|RESULTADO|ERROR|BAD|DIN/WS|I2S:" build/$tag.log | head -60 | sed 's/^/  /'
+    if grep -a -q "RESULTADO: PASS" build/$tag.log; then
+        npass=$((npass + 1))
+    else
+        failed="$failed $tag"
+    fi
 done
+echo "run_blocks: $npass/$n PASS${failed:+ (failed:$failed)}"
+[ "$npass" = "$n" ]

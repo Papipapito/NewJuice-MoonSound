@@ -13,6 +13,11 @@ the FPGA build.
 | `blocks/tb_opll.v` | New Juice's OPLL (jt2413, unchanged) run directly with the board bench's register writes: it sounds. In the board bench, after sv2v, Icarus leaves its output at X, so there it is only checked that the writes reach it. | `bash blocks/run_blocks.sh opll` |
 | `board/tb_nj_board.v` | The **whole** design (sv2v of every file in `new-juice.gprj`, Gowin simulation primitives) wired by pin number to a WonderTANG 2.0b/2.02b board model, with synthetic flash images (no copyrighted ROM): boot, ROM copy, YRW801 copy and checksum, FM and wave registers, /WAIT and /INT, mapper, Super-MegaRAM, OPLL, I2S output (decoded as I2S, each word checked against the mix, saturation of the mix), bus release after reads, memory reads without /WAIT at 3.58/5.37/7.16 MHz with 24 PCM voices playing. | `bash board/run_board.sh` (`blank`: flash without the YRW801; `all`: both at once). About 40 minutes. |
 
+Both scripts compile every bench afresh (an old `build/*.vvp` is deleted
+before compiling, never reused), print `run_blocks: n/n PASS` or
+`run_board: n/n PASS`, and exit with a non-zero status when a bench does not
+compile or its log does not end in `RESULTADO: PASS`.
+
 `run_board.sh` shortens a few start-up delays in the **converted netlist**
 (automatic S1 pulse, SDRAM start-up test length, ROM copy length); the RTL is
 not modified. The video PLL is held in reset, so HDMI is not exercised. Some
