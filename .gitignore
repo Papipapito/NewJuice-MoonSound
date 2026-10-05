@@ -1,7 +1,9 @@
 .DS_Store
 # MoonSound fork: never commit the YRW801 wave ROM (copyright Yamaha)
-roms/yrw801*
-roms/YRW801*
+# (any file with yrw801 in its name, any case, in any folder)
+*[Yy][Rr][Ww]801*
+# ...except the source of the loader, which holds no ROM data
+!src/moonsound/yrw801_loader.v
 
 # Local deliverables (bitstreams for testing), never committed
 files/

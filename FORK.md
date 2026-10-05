@@ -235,7 +235,8 @@ or `openFPGALoader -b tangnano20k -f new-juice.fs`, and the YRW801 with
 The MoonSound needs the Yamaha YRW801 wave ROM (2 MB). It is copyrighted by
 Yamaha, so it is **not** in this repository and never goes into a release:
 each user writes their own image to the flash at 0x200000 (`make yrw801`).
-`roms/yrw801*` is in `.gitignore`. A checksum taken while it is copied tells
+`.gitignore` keeps out any file with `yrw801` in its name, in any case and
+any folder (the loader's source `yrw801_loader.v` excepted). A checksum taken while it is copied tells
 whether the image is a YRW801 (the LED warning above).
 
 ## Known limits

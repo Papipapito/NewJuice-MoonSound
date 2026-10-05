@@ -9,7 +9,8 @@ set -e
 cd "$(dirname "$0")"
 R=$(cd ../../.. && pwd)
 GW=${GOWIN_SIMLIB:-/mnt/c/Gowin/Gowin_V1.9.12.03_x64/IDE/simlib/gw2a/prim_sim.v}
-SV2V=${SV2V:-$(command -v sv2v || echo /home/albert/bin/sv2v)}
+SV2V=${SV2V:-sv2v}                  # or SV2V=/path/to/sv2v
+command -v "$SV2V" >/dev/null || { echo "sv2v not found: put it in PATH or set SV2V=/path/to/sv2v"; exit 2; }
 [ -f "$GW" ] || { echo "Gowin simulation library not found: $GW (set GOWIN_SIMLIB)"; exit 2; }
 MODE=${1:-main}
 mkdir -p build
