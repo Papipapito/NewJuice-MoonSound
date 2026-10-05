@@ -293,6 +293,11 @@ module top
     wire signed [17:0] audio_mix_wide;
     wire [15:0] mixed_audio_sample;
     reg [15:0] audio_sample_hold = 16'd0;
+    // MoonSound fork: left/right snapshots of the same instant, for HDMI
+    wire [15:0] mixed_audio_left;
+    wire [15:0] mixed_audio_right;
+    reg [15:0] audio_sample_hold_left = 16'd0;
+    reg [15:0] audio_sample_hold_right = 16'd0;
     (* syn_preserve = 1, ASYNC_REG = "TRUE" *)
     reg [1:0] audio_req_sync = 2'b00;
     reg audio_req_sync_d = 1'b0;
@@ -310,18 +315,21 @@ module top
 
     generate
         if (AUDIO_LOGIC_ENABLED) begin : audio_logic_enabled
+            // MoonSound fork: 32 BCLK per frame at 108 MHz / 70 =
+            // 1.542857 MHz, i.e. 48.2 kHz (was 27 MHz / 38: about 22 kHz).
+            // Same rate MoonTANG uses with this amplifier.
             clockdiv #(
-                .CLK_HZ(27_000_000),
-                .OUT_HZ(705_600)
+                .CLK_HZ(108_000_000),
+                .OUT_HZ(1_542_857)
             ) audio_clock_divider (
-                .clk_src(clk),
+                .clk_src(main_clk),
                 .reset_n(board_reset_n),
                 .clk_div(audio_bclk_raw),
                 .clk_rise(audio_bclk_rise)
             );
 
             audio_drive audio_drive_inst (
-                .clk(clk),
+                .clk(main_clk),
                 .bit_enable(audio_bclk_rise),
                 .bit_clock(audio_bclk_raw),
                 .rst_n(board_reset_n),
@@ -428,12 +436,17 @@ module top
             audio_req_sync <= 2'b00;
             audio_req_sync_d <= 1'b0;
             audio_sample_hold <= 16'd0;
+            audio_sample_hold_left <= 16'd0;
+            audio_sample_hold_right <= 16'd0;
         end else begin
             audio_req_sync <= {audio_req_sync[0], audio_req};
             audio_req_sync_d <= audio_req_sync[1];
 
-            if (audio_req_sync[1] && !audio_req_sync_d)
+            if (audio_req_sync[1] && !audio_req_sync_d) begin
                 audio_sample_hold <= mixed_audio_sample;
+                audio_sample_hold_left <= mixed_audio_left;
+                audio_sample_hold_right <= mixed_audio_right;
+            end
         end
     end
 
@@ -902,9 +915,50 @@ module top
         {{2{scc_audio_sample[15]}}, scc_audio_sample} +
         {{2{keyclick_audio_sample[15]}}, keyclick_audio_sample};
     // JT51 is attenuated by 6 dB above after its stereo-to-mono average.
-    // Reducing the complete mix by 6 dB then guarantees 16-bit headroom
-    // without changing the established levels of the other sources.
-    assign mixed_audio_sample = audio_mix_wide[16:1];
+    // Reducing the complete mix by 6 dB keeps the established levels of the
+    // other sources.
+    // MoonSound fork: the OPL4 (FM + wave, already saturated to 16 bits)
+    // joins at the level of the OPLL: mono for the I2S amplifier, which
+    // feeds the mono SOUNDIN of the slot, and in stereo for HDMI. The sum
+    // now saturates instead of wrapping around.
+    // The whole sum plus saturation does not fit in one 108 MHz cycle, so
+    // it is split in two register stages (two clocks of latency).
+    reg signed [17:0] audio_mix_wide_q = 18'sd0;
+    reg [15:0] mixed_audio_sample_q = 16'd0;
+    reg [15:0] mixed_audio_left_q = 16'd0;
+    reg [15:0] mixed_audio_right_q = 16'd0;
+    wire signed [18:0] audio_mix_mono_wide =
+        {audio_mix_wide_q[17], audio_mix_wide_q} +
+        {{3{opl4_mix_mono[15]}}, opl4_mix_mono};
+    wire signed [18:0] audio_mix_left_wide =
+        {audio_mix_wide_q[17], audio_mix_wide_q} +
+        {{3{opl4_mix_l[15]}}, opl4_mix_l};
+    wire signed [18:0] audio_mix_right_wide =
+        {audio_mix_wide_q[17], audio_mix_wide_q} +
+        {{3{opl4_mix_r[15]}}, opl4_mix_r};
+
+    function automatic [15:0] audio_half_sat;
+        input signed [18:0] v;
+        begin
+            // v / 2, saturated to 16 bits
+            if (v[18:16] == 3'b000 || v[18:16] == 3'b111)
+                audio_half_sat = v[16:1];
+            else
+                audio_half_sat = v[18] ? 16'h8000 : 16'h7FFF;
+        end
+    endfunction
+
+    always_ff @(posedge main_clk)
+    begin
+        audio_mix_wide_q <= audio_mix_wide;
+        mixed_audio_sample_q <= audio_half_sat(audio_mix_mono_wide);
+        mixed_audio_left_q <= audio_half_sat(audio_mix_left_wide);
+        mixed_audio_right_q <= audio_half_sat(audio_mix_right_wide);
+    end
+
+    assign mixed_audio_sample = mixed_audio_sample_q;
+    assign mixed_audio_left = mixed_audio_left_q;
+    assign mixed_audio_right = mixed_audio_right_q;
 
     // ---------------------------------------------------------------------
     // HDMI video reset (MoonSound fork: Franky removed)
@@ -996,29 +1050,42 @@ module top
 
     reg [15:0] hdmi_mix_meta = 16'd0;
     reg [15:0] hdmi_mix_sample = 16'd0;
+    reg [15:0] hdmi_mix_meta_right = 16'd0;
+    reg [15:0] hdmi_mix_sample_right = 16'd0;
     // Apply one bit of gain only to HDMI, with saturation rather than wrap.
+    // MoonSound fork: HDMI carries the stereo mix (left and right).
     wire signed [16:0] hdmi_mix_louder_wide =
-        $signed({audio_sample_hold[15], audio_sample_hold}) <<< 1;
+        $signed({audio_sample_hold_left[15], audio_sample_hold_left}) <<< 1;
     wire [15:0] hdmi_mix_louder_sample =
         hdmi_mix_louder_wide[16:15] == 2'b00 ||
         hdmi_mix_louder_wide[16:15] == 2'b11 ? hdmi_mix_louder_wide[15:0] :
         hdmi_mix_louder_wide[16] ? 16'h8000 : 16'h7FFF;
+    wire signed [16:0] hdmi_mix_louder_wide_right =
+        $signed({audio_sample_hold_right[15], audio_sample_hold_right}) <<< 1;
+    wire [15:0] hdmi_mix_louder_sample_right =
+        hdmi_mix_louder_wide_right[16:15] == 2'b00 ||
+        hdmi_mix_louder_wide_right[16:15] == 2'b11 ? hdmi_mix_louder_wide_right[15:0] :
+        hdmi_mix_louder_wide_right[16] ? 16'h8000 : 16'h7FFF;
     always_ff @(posedge clk or negedge sms_reset_n)
     begin
         if (!sms_reset_n) begin
             hdmi_mix_meta <= 16'd0;
             hdmi_mix_sample <= 16'd0;
+            hdmi_mix_meta_right <= 16'd0;
+            hdmi_mix_sample_right <= 16'd0;
         end else begin
-            // audio_sample_hold is a coherent, slowly changing snapshot of
-            // the same complete mix sent to audio_drive.
+            // audio_sample_hold_* are coherent, slowly changing snapshots
+            // of the same complete mix sent to audio_drive.
             hdmi_mix_meta <= hdmi_mix_louder_sample;
             hdmi_mix_sample <= hdmi_mix_meta;
+            hdmi_mix_meta_right <= hdmi_mix_louder_sample_right;
+            hdmi_mix_sample_right <= hdmi_mix_meta_right;
         end
     end
 
     wire [15:0] hdmi_audio_samples [1:0];
     assign hdmi_audio_samples[0] = hdmi_mix_sample;
-    assign hdmi_audio_samples[1] = hdmi_mix_sample;
+    assign hdmi_audio_samples[1] = hdmi_mix_sample_right;
 
     wire [9:0] hdmi_tmds_internal [2:0];
     hdmi #(
