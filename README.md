@@ -1,6 +1,6 @@
-> **MoonSound fork (branch `moonsound`, private and experimental):** Franky is
-> replaced by a MoonSound (OPL4) and the mapper is 2 MB. See
-> [MOONSOUND.md](MOONSOUND.md) before using anything below.
+> **NewJuice-MoonSound fork (private, experimental, not yet tested on a board):**
+> Franky is replaced by a MoonSound (OPL4) and the mapper is 2 MB. Read
+> [FORK.md](FORK.md) before using anything below; the rest is New Juice's own README.
 
 # NEW JUICE Firmware for WonderTANG 2.02b
 

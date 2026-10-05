@@ -1,73 +1,9 @@
-# New Juice + MoonSound (OPL4) — experimental fork
+# New Juice + MoonSound (OPL4): technical notes
 
-This branch (`moonsound`) adds a MoonSound — Yamaha YMF278B / OPL4: OPL3 FM
-plus the 24-voice wavetable — to New Juice for the WonderTANG 2.0b / 2.02b, in
-place of Franky. It is **private and experimental**: New Juice has no license,
-so nothing here is published until its author, lfantoniosi, decides how (or
-whether) it may be. It has been simulated, not yet run on a board.
-
-The MoonSound comes from [MoonTANG](src/moonsound/NOTICE.md) (Albert
-"Papipapito", with Claude): the OPL3 core of Greg Taylor (LGPL-3.0), the
-YMF278B engine of srg320 / MAME (BSD-3) and MoonTANG's glue (GPL-3.0). See
-`src/moonsound/NOTICE.md` for every component and license.
-
-## What changes for the user
-
-| | New Juice | This fork |
-|---|---|---|
-| Franky (SMS VDP + SN76489, ports 48h/49h, 88h/89h) | yes | **removed** |
-| Sound scope on HDMI | yes | **removed** (it drew into Franky's framebuffer) |
-| MoonSound FM (C4h-C7h) and wavetable (7Eh-7Fh) | — | **yes** |
-| Memory mapper | 4 MB | **2 MB** |
-| Nextor + microSD, Super-MegaRAM SCC, PSG, OPLL, SFG-01, debugger terminal on HDMI | yes | yes, unchanged |
-| Audio to the slot (I2S amplifier, mono) | about 22 kHz | **48.2 kHz** |
-| Audio on HDMI | mono, 44.1 kHz | **stereo**, 44.1 kHz |
-
-The MoonSound has 1 MB of wave RAM (the standard 1 MB board size). Players see
-the YRW801 GM samples as on the real cartridge.
-
-## Flash and SDRAM maps
-
-SPI flash (unchanged except the new 0x200000 area):
-
-| Range | Contents |
-|---|---|
-| 0x000000-0x0DD89A | bitstream |
-| 0x100000-0x11FFFF | Nextor |
-| 0x120000-0x127FFF | FM-PAC + SFG-01 |
-| **0x200000-0x3FFFFF** | **YRW801 wave ROM (2 MB, user supplied)** |
-
-SDRAM (8 MB):
-
-| Range | Contents |
-|---|---|
-| 0x000000-0x1FFFFF | memory mapper (2 MB; pages 80h-FFh mirror 00h-7Fh; IN FCh-FFh reads bit 7 as 1, like a real 2 MB mapper) |
-| 0x200000-0x3FFFFF | YRW801 copy (MoonSound wave addresses 0x000000-0x1FFFFF) |
-| 0x400000-0x5FFFFF | Super-MegaRAM (unchanged) |
-| 0x600000-0x627FFF | ROM copies (unchanged) |
-| 0x700000-0x7FFFFF | MoonSound wave RAM (wave addresses 0x200000-0x2FFFFF) |
-
-Wave addresses 0x300000-0x3FFFFF have no memory: reads return FFh, writes are
-ignored, nothing is mirrored, so size detection finds 1 MB.
-
-## Programming
-
-Build and flash the bitstream and New Juice's ROMs as usual (`make`,
-`make program`, `make roms`). Then write **your own** YRW801 image (2 MB; it is
-copyrighted by Yamaha and is not included) once:
-
-```
-make yrw801 YRW801=/path/to/yrw801.rom
-```
-
-That writes it at flash offset 0x200000, which nothing else uses.
-
-At power-on New Juice first copies its ROMs (the MSX waits with /WAIT, as
-before); then the YRW801 is copied to the SDRAM in the background while the MSX
-runs (about 1.7 s: 0.8 us per byte in simulation). Until that copy ends the wavetable is held in reset; the FM
-part works at once. A checksum tells whether the image is the YRW801: if the
-copy fails or the image is not the YRW801, the LED gives a short flash every
-1.2 s (it still shows SD activity as before).
+How the MoonSound is built into New Juice, the place-and-route sweep, the
+simulation results and the known limits. What the fork is, its status, why it
+is private, the memory maps, clocks, resources, how to flash it and the
+licenses are in [FORK.md](FORK.md).
 
 ## How it is built in
 
@@ -78,11 +14,14 @@ copy fails or the image is not the YRW801, the LED gives a short flash every
   touched while the slot clock runs and /RESET is high.
 - `src/moonsound/nj_sdram_arb.v`: an arbiter between New Juice's
   `sdram_command_adapter` and its `sdram.v`. New Juice is never refused a
-  command: it waits at most one MoonSound operation (simulated: CPU read
-  latency 93 ns -> at most 167-176 ns). The arbiter also refreshes the SDRAM
-  on its own every 7.8 us when nothing else did, because New Juice only
-  refreshes after Z80 RFSH cycles and the wave ROM must survive a held /RESET
-  or a /WAIT from another cartridge.
+  command: it waits at most one MoonSound operation. /SLTSL and /RD, taken
+  straight from the pins, announce a CPU read some 8-13 clocks before New
+  Juice issues it, and no new wave operation starts meanwhile (simulated: CPU
+  read latency 93 ns without the MoonSound, at most 102-139 ns with it;
+  167-176 ns without that hint). The arbiter also refreshes the SDRAM on its
+  own every 7.8 us when nothing else did, because New Juice only refreshes
+  after Z80 RFSH cycles and the wave ROM must survive a held /RESET or a /WAIT
+  from another cartridge.
 - Clocks, no new PLL: rpll_main's CLKOUTD (54 MHz, bus side of the OPL4) and
   CLKOUTD3 (36 MHz: the PCM engine, whose clock enable averages 33.8688 MHz,
   and the OPL3 FM, retuned from 27 to 36 MHz). Everything is timed together
@@ -105,20 +44,11 @@ copy fails or the image is not the YRW801, the LED gives a short flash every
 
 ## Resources and timing
 
-Measured on this branch with both tool versions and every place-and-route
+Resource usage is in [FORK.md](FORK.md#resources-and-timing). Timing was
+measured on this branch with both tool versions and every place-and-route
 option the tools accept for this device (Gowin silently turns Place 3 and 4
 into Place 0 here, and Place 2 gives exactly the same placement as Place 1, so
-the 18 builds below are 10 different implementations, 5 per tool version):
-
-| | New Juice (author's bitstream, 1.9.11) | This fork, Gowin 1.9.12.03 | This fork, Gowin 1.9.11.03 Edu |
-|---|---|---|---|
-| Logic | 12546 / 20736 (61 %) | 17188 (83 %) | 17246 (83 %) |
-| CLS | 9002 / 10368 (87 %) | 9907-9950 (96 %) | 9825-9899 (95 %) |
-| Registers | | 9523 | 9192 |
-| BSRAM | 46 / 46 | 31 / 46 | 31 / 46 |
-| DSP | 2 | 3.5 | 3.5 |
-| Global clocks (PRIMARY / LW) | 3 / 8 | 5 / 8, 8 / 8 | 5 / 8, 8 / 8 |
-| rPLL | 2 / 2 | 2 / 2 (no new PLL) | 2 / 2 |
+the 18 builds below are 10 different implementations, 5 per tool version).
 
 Worst setup slack (all in main_clk, 108 MHz) and violated endpoints:
 
@@ -136,7 +66,7 @@ project uses `Place_Option = 1`, `Route_Option = 2`
 (`impl/new-juice_process_config.json`), the best of the sweep with both
 versions. With 1.9.12 P1/R2 the other clocks have, as Fmax against the
 constraint: opl4_clk54 95.2 / 54 MHz, PCM engine (opl4_clk_eng) 41.5 / 36 MHz,
-clkin (OPM, OPLL, PSG) 53.9 / 27 MHz, cpu_clk 67.4 / 3.58 MHz.
+clkin (OPM, OPLL, HDMI pixels) 53.9 / 27 MHz, cpu_clk 67.4 / 3.58 MHz.
 
 The tightest paths are still New Juice's own: from the bus snapshot
 (`mp_debouncer`) through the slot decode to the SDRAM request of the memory
