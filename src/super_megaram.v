@@ -368,14 +368,18 @@ module super_megaram
 
             case (state)
                 STATE_IDLE: begin
+                    // MoonSound fork (timing): the request registers load on
+                    // every idle clock and are only used once sdrc_cmd_en is
+                    // issued, so the start decision no longer drives their
+                    // clock enables (same values, same cycle as before).
+                    sdrc_addr_reg <= selected_sdram_byte_addr[22:2];
+                    sdrc_dqm_reg <= byte_dqm;
+                    sdrc_data_reg <= {4{data_in}};
+                    sdrc_cmd_reg <= memory_read_selected ?
+                                    SDRAM_CMD_READ : SDRAM_CMD_WRITE;
                     if (start_access) begin
                         access_is_read <= memory_read_selected;
                         access_byte_lane <= byte_lane;
-                        sdrc_addr_reg <= selected_sdram_byte_addr[22:2];
-                        sdrc_dqm_reg <= byte_dqm;
-                        sdrc_data_reg <= {4{data_in}};
-                        sdrc_cmd_reg <= memory_read_selected ?
-                                        SDRAM_CMD_READ : SDRAM_CMD_WRITE;
                         sdrc_cmd_en_reg <= 1'b1;
                         cpu_cycle_seen <= 1'b1;
                         address_snapshot_pending <= 1'b0;

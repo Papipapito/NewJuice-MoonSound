@@ -229,12 +229,16 @@ module flash_roms
                     end
                 end
                 STATE_READY: begin
+                    // MoonSound fork (timing): the request registers load on
+                    // every idle clock and are only used once sdrc_cmd_en is
+                    // issued, so the start decision no longer drives their
+                    // clock enables (same values, same cycle as before).
+                    sdrc_cmd_reg <= SDRAM_CMD_READ;
+                    sdrc_addr_reg <= selected_sdram_byte_addr[22:2];
+                    sdrc_dqm_reg <= byte_dqm(selected_sdram_byte_addr[1:0]);
+                    sdrc_data_reg <= 32'd0;
                     if (rom_read_selected && !cpu_cycle_seen) begin
                         read_lane_reg <= selected_sdram_byte_addr[1:0];
-                        sdrc_cmd_reg <= SDRAM_CMD_READ;
-                        sdrc_addr_reg <= selected_sdram_byte_addr[22:2];
-                        sdrc_dqm_reg <= byte_dqm(selected_sdram_byte_addr[1:0]);
-                        sdrc_data_reg <= 32'd0;
                         sdrc_cmd_en_reg <= 1'b1;
                         cpu_cycle_seen <= 1'b1;
                         state <= STATE_ROM_CMD;

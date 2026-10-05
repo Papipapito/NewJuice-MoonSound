@@ -102,10 +102,14 @@ module linear_rom
 
             case (state)
                 STATE_IDLE: begin
+                    // MoonSound fork (timing): the request registers load on
+                    // every idle clock and are only used once sdrc_cmd_en is
+                    // issued, so the start decision no longer drives their
+                    // clock enables (same values, same cycle as before).
+                    sdrc_addr_reg <= byte_address[22:2];
+                    sdrc_dqm_reg <= byte_dqm;
                     if (start_read) begin
                         access_byte_lane <= byte_lane;
-                        sdrc_addr_reg <= byte_address[22:2];
-                        sdrc_dqm_reg <= byte_dqm;
                         sdrc_cmd_en_reg <= 1'b1;
                         cycle_seen <= 1'b1;
                         address_snapshot_pending <= 1'b0;
