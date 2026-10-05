@@ -27,6 +27,10 @@ DOS2_ROM_OFFSET ?= 1048576
 FM_ROM := $(ROOT)/roms/16k_fm_opl.bin
 FM_ROM_OFFSET ?= 1179648
 SFG_ROM := $(ROOT)/roms/SFG01.ROM
+# MoonSound fork: the YRW801 wave ROM (2 MB, copyright Yamaha) is NOT included.
+# Point YRW801 at your own image; it goes to flash 0x200000.
+YRW801 ?= $(ROOT)/roms/yrw801.rom
+YRW801_OFFSET ?= 2097152
 
 JT_SUBMODULE_DIRS := \
 	$(ROOT)/src/jtopl \
@@ -47,7 +51,7 @@ PROJECT_INPUTS := \
 
 .DEFAULT_GOAL := all
 
-.PHONY: all init build rebuild program reprogram roms check-submodules check-tools check-programmer
+.PHONY: all init build rebuild program reprogram roms yrw801 check-submodules check-tools check-programmer
 
 all: build
 
@@ -100,6 +104,16 @@ roms: check-programmer $(DOS2_ROM) $(FM_ROM) $(SFG_ROM)
 		echo "Programming FM and SFG-01 ROMs at offset $(FM_ROM_OFFSET)"; \
 		"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" \
 			$(ROM_PROGRAMMER_FLAGS) -o "$(FM_ROM_OFFSET)" "$$combined_rom"
+
+yrw801: check-programmer
+	@if [ ! -f "$(YRW801)" ]; then \
+		echo "YRW801 image not found: $(YRW801)"; \
+		echo "Set YRW801=/path/to/yrw801.rom (2 MB; not included)."; \
+		exit 1; \
+	fi
+	@echo "Programming the YRW801 wave ROM at offset $(YRW801_OFFSET)"
+	@"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" \
+		$(ROM_PROGRAMMER_FLAGS) -o "$(YRW801_OFFSET)" "$(YRW801)"
 
 check-tools:
 	@if [ ! -x "$(GW_SH)" ]; then \

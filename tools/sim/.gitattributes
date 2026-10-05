@@ -1,0 +1,3 @@
+# the benches run in a Linux shell: keep LF line ends on Windows checkouts
+*.sh text eol=lf
+*.py text eol=lf
