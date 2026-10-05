@@ -21,7 +21,12 @@ module audio_drive
 
     // bit_clock is an output waveform only. All serializer state remains in
     // the clk domain and advances on bit_enable.
-    assign HP_BCK = bit_clock;
+    // MoonSound fork: BCK goes out inverted. bit_enable comes one clk after
+    // the rising edge of bit_clock, so DIN and WS used to change only one
+    // clk (9.3 ns at 108 MHz) after the edge the MAX98357A samples on (it
+    // needs 10 ns of hold). Inverted, they change on the falling edge of
+    // HP_BCK and stay put for half a bit on both sides of its rising edge.
+    assign HP_BCK = ~bit_clock;
     assign HP_WS = hp_ws_reg;
     assign HP_DIN = hp_din_reg;
     assign req = req_reg;
@@ -74,9 +79,14 @@ module audio_drive
     begin
         if (!rst_n)
             hp_ws_reg <= 1'b0;
-        else if (bit_enable && bit_count == 5'd3)
+        // MoonSound fork: WS changes one BCK before the MSB of its word (it
+        // used to change with the MSB, which is left-justified framing). The
+        // MAX98357A of the Tang Nano 20K takes I2S framing (the left-justified
+        // part is the MAX98357B) and read every word shifted by one bit:
+        // twice the level, wrapping around above half scale.
+        else if (bit_enable && bit_count == 5'd2)
             hp_ws_reg <= 1'b0;
-        else if (bit_enable && bit_count == 5'd19)
+        else if (bit_enable && bit_count == 5'd18)
             hp_ws_reg <= 1'b1;
     end
 

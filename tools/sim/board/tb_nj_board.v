@@ -371,24 +371,33 @@ module tb_nj_board;
         if (spk < spk_min) spk_min = spk;
     end
 
-    // I2S as New Juice sends it: the 16 bits that follow each LRCLK edge
-    // (sampled on BCLK rising edges). Mono = both halves of a frame equal.
+    // I2S as the MAX98357A takes it (sampled on BCLK rising edges): the MSB
+    // one BCLK after the LRCLK edge, the LSB on the next LRCLK edge. Mono =
+    // both halves of a frame equal; every word must also be one of the last
+    // mix snapshots taken for audio_drive (exact value, no shift or wrap).
     reg        i2s_ws_q = 1'b0;
-    reg [15:0] i2s_sh = 16'd0, i2s_first = 16'd0;
-    integer    i2s_nb = 99, i2s_frames = 0, i2s_lr_bad = 0;
+    reg [15:0] i2s_sh = 16'd0, i2s_first = 16'd0, i2s_word;
+    integer    i2s_nb = 99, i2s_frames = 0, i2s_lr_bad = 0, i2s_val_bad = 0;
+    reg [15:0] hold_h0 = 16'd0, hold_h1 = 16'd0, hold_h2 = 16'd0, hold_h3 = 16'd0;
+    always @(fpga.u_top.audio_sample_hold) begin
+        hold_h3 = hold_h2; hold_h2 = hold_h1; hold_h1 = hold_h0; hold_h0 = fpga.u_top.audio_sample_hold;
+    end
     always @(posedge pin[56]) begin
         if (pin[55] !== i2s_ws_q) begin
-            if (i2s_nb == 16) begin
-                if (i2s_ws_q === 1'b0) i2s_first = i2s_sh;      // half with LRCLK low
+            if (i2s_nb == 15) begin
+                i2s_word = {i2s_sh[14:0], pin[54]};
+                if (i2s_word !== hold_h0 && i2s_word !== hold_h1 && i2s_word !== hold_h2 && i2s_word !== hold_h3)
+                    i2s_val_bad = i2s_val_bad + 1;
+                if (i2s_ws_q === 1'b0) i2s_first = i2s_word;    // half with LRCLK low
                 else begin
                     i2s_frames = i2s_frames + 1;
-                    if (i2s_sh !== i2s_first) i2s_lr_bad = i2s_lr_bad + 1;
+                    if (i2s_word !== i2s_first) i2s_lr_bad = i2s_lr_bad + 1;
                 end
             end
             i2s_ws_q = pin[55];
-            i2s_sh = {15'd0, pin[54]};
-            i2s_nb = 1;
-        end else if (i2s_nb < 16) begin
+            i2s_sh = 16'd0;
+            i2s_nb = 0;
+        end else if (i2s_nb < 15) begin
             i2s_sh = {i2s_sh[14:0], pin[54]};
             i2s_nb = i2s_nb + 1;
         end
@@ -659,7 +668,7 @@ module tb_nj_board;
         ok(!rdv[1], "flag LD del status se limpia (cabecera leida de la SDRAM)");
         wv_w(8'h68, 8'h80);
         #500_000;
-        audio_clear; n_frames = 0; n_lr_diff = 0; i2s_frames = 0; i2s_lr_bad = 0;
+        audio_clear; n_frames = 0; n_lr_diff = 0; i2s_frames = 0; i2s_lr_bad = 0; i2s_val_bad = 0;
         #3_000_000;
         $display("         PCM: max=%0d min=%0d | altavoz: max=%0d min=%0d | tramas I2S=%0d (L/R distintas %0d)",
                  pcm_max, pcm_min, spk_max, spk_min, n_frames, n_lr_diff);
@@ -670,8 +679,9 @@ module tb_nj_board;
         ok(pcm_max > 2000 && pcm_min < -2000, "el motor PCM reproduce la onda");
         ok(spk_max > 500 && spk_min < -500, "y llega al amplificador de la Tang por I2S");
         ok(n_frames > 130 && n_frames < 160, "tramas I2S a ~48 kHz (3 ms)");
-        $display("         I2S: %0d tramas, %0d con las dos mitades distintas", i2s_frames, i2s_lr_bad);
+        $display("         I2S: %0d tramas, %0d con las dos mitades distintas, %0d palabras que no son la muestra de la mezcla", i2s_frames, i2s_lr_bad, i2s_val_bad);
         ok(i2s_frames > 130 && i2s_lr_bad == 0, "cada trama I2S lleva la misma muestra en sus dos mitades (mono)");
+        ok(i2s_val_bad == 0, "en formato I2S (MAX98357A) cada palabra es exactamente la muestra de la mezcla");
         measure(3, f);
         $display("         BCLK = %0.4f MHz -> fs = %0.1f Hz", f, f * 1.0e6 / 32.0);
         ok(near(f, 1.542857, 0.002), "BCLK = 108 MHz / 70");

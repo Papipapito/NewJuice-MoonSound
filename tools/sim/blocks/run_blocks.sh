@@ -1,10 +1,11 @@
 #!/bin/bash
 # Block-level benches of the New Juice MoonSound fork (WSL Ubuntu-24.04, Icarus 12).
-# Usage: bash tools/sim/blocks/run_blocks.sh [arb|refresh|map|opll|all]
+# Usage: bash tools/sim/blocks/run_blocks.sh [arb|refresh|map|opll|i2s|all]
 #   arb      SDRAM arbiter + real adapter/controller/wave chain, Z80 at 3.58/5.37/7.16 MHz
 #   refresh  Z80 stopped 70 ms: own refresh keeps the SDRAM alive (+ negative control)
 #   map      2 MB mapper, wave memory map, size detection of the wave RAM
 #   opll     New Juice's OPLL (jt2413) run directly, without sv2v
+#   i2s      audio_drive + clockdiv: I2S framing, setup/hold and rate for the MAX98357A
 set -e
 cd "$(dirname "$0")"
 R=../../..
@@ -46,11 +47,14 @@ fi
 if [ "$WHAT" = map ] || [ "$WHAT" = all ]; then
     bg map         tb_map "$MAP_SRC"
 fi
+if [ "$WHAT" = i2s ] || [ "$WHAT" = all ]; then
+    bg i2s         tb_i2s "tb_i2s.v $S/audio_drive.v $S/clockdiv.v"
+fi
 if [ "$WHAT" = opll ] || [ "$WHAT" = all ]; then
     bg opll        tb_opll "tb_opll.v $S/jtopl/hdl/*.v" -DSIMULATION
 fi
 wait
 for f in build/*.log; do
     echo "=== $f"
-    grep -a -E "CONFIG|AUDIO|MOTOR|LATENC|ARB |CPU |SDRAM|DATOS|HIST|Z80 parado|refrescos|caducadas|\[ok\]|\[FAIL\]|RESULTADO|ERROR|BAD" "$f" | head -60 | sed 's/^/  /'
+    grep -a -E "CONFIG|AUDIO|MOTOR|LATENC|ARB |CPU |SDRAM|DATOS|HIST|Z80 parado|refrescos|caducadas|\[ok\]|\[FAIL\]|RESULTADO|ERROR|BAD|DIN/WS|I2S:" "$f" | head -60 | sed 's/^/  /'
 done
