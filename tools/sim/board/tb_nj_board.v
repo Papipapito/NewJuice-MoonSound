@@ -245,12 +245,18 @@ module tb_nj_board;
     realtime t_rd_up = 0, t_rel_d = 0, t_rel_bd = 0;
     always @(negedge cart_drives_d) if (msx_on) t_rel_d  = $realtime;
     always @(posedge s_busdir_n)    if (msx_on) t_rel_bd = $realtime;
-    real rel_ours, rel_nj;
-    task release_time(input [15:0] p, output real rel);
+    real rel_ours, rel_nj, rel_ours_in, rel_nj_in;
+    // New Juice sees /RD through its bus debouncer, whose delay depends on
+    // the phase of /RD against the 108 MHz clock; rel_in is measured from
+    // the moment the design's own /RD (u_top.rd_n) goes up
+    realtime t_rdn_in = 0;
+    always @(posedge fpga.u_top.rd_n) if (msx_on) t_rdn_in = $realtime;
+    task release_time(input [15:0] p, output real rel, output real rel_in);
         begin
             io_rd(p);
             #400;
             rel = ((t_rel_d > t_rel_bd) ? t_rel_d : t_rel_bd) - t_rd_up;
+            rel_in = ((t_rel_d > t_rel_bd) ? t_rel_d : t_rel_bd) - t_rdn_in;
         end
     endtask
 
@@ -519,11 +525,14 @@ module tb_nj_board;
         // the release lags /RD by its debounce delay; the MoonSound gates its
         // registered decode with that same /RD and /IORQ, so it must let go
         // at the same time (within one 108 MHz clock and the phase of /RD)
-        release_time(16'h00C4, rel_ours);
-        release_time(16'h00FE, rel_nj);
-        $display("         suelta D0-D7 y /BUSDIR %0.0f ns tras subir /RD en C4h (New Juice en su puerto FEh: %0.0f ns)", rel_ours, rel_nj);
-        ok(s_busdir_n === 1'b1 && !cart_drives_d && rel_ours < rel_nj + 15.0 && rel_ours < 300.0,
-           "al acabar la lectura suelta el bus y /BUSDIR a la vez que New Juice en sus puertos (+-15 ns)");
+        release_time(16'h00C4, rel_ours, rel_ours_in);
+        release_time(16'h00FE, rel_nj, rel_nj_in);
+        $display("         suelta D0-D7 y /BUSDIR %0.0f ns tras subir /RD en C4h, %0.0f ns tras el /RD interno (New Juice en su puerto FEh: %0.0f / %0.0f ns)",
+                 rel_ours, rel_ours_in, rel_nj, rel_nj_in);
+        ok(s_busdir_n === 1'b1 && !cart_drives_d && rel_ours < rel_nj + 60.0 && rel_ours < 300.0,
+           "al acabar la lectura suelta el bus y /BUSDIR (en el slot, como mucho 60 ns despues que New Juice)");
+        ok(rel_ours_in < rel_nj_in + 5.0,
+           "y lo suelta a la vez que New Juice en sus puertos, contado desde su /RD interno (+-5 ns)");
         fm_w(0, 8'h20, 8'h5A); io_wr(16'h00C4, 8'h20); io_rd(16'h00C5);
         ok(rdv === 8'h5A, "registro FM 020h: se relee 5Ah por C5h");
         fm_w(1, 8'h21, 8'hA5); io_wr(16'h00C6, 8'h21); io_rd(16'h00C7);
