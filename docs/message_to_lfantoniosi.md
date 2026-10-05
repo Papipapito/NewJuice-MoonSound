@@ -40,7 +40,8 @@ What it does:
 - 83 % logic, 96 % CLS, 31 of 46 BSRAM. Timing closes in all 18 builds I
   tried (Gowin 1.9.12 and 1.9.11, every place-and-route option): no setup or
   hold violation, and +0.78 ns of worst setup slack at 108 MHz with the
-  project's settings.
+  project's settings (as in New Juice, the SDRAM pins are not part of that;
+  see below).
 
 A few of the changes may be useful to New Juice even without the MoonSound.
 Each one is a small commit of its own:
@@ -54,6 +55,14 @@ Each one is a small commit of its own:
   clients) had only a few tens of picoseconds to spare in some builds. The
   memory clients now load their request registers in every idle cycle, with
   the same values and in the same cycle as before.
+- `top.sdc` leaves the SDRAM pins unconstrained (the SDRAM clock line is
+  commented out), so Gowin never times that interface. Reads and commands
+  sit in the I/O cells and have margin, but the write data cannot (each bit
+  drives two pins) and lands wherever the placer puts it: measured from the
+  SDF on New Juice's sources built with 1.9.12, -0.37 ns in the slow corner
+  with typical SDR timing for the die. It boots, so it is unchecked margin,
+  not a known bug. FORK.md has an SDC that times it and what it takes to
+  close it.
 
 It is your project, so it is your decision. Nothing has been published, and
 the fork stays private unless you say otherwise. Any of these is fine with

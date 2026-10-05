@@ -14,12 +14,17 @@ YMF278B / OPL4: OPL3 FM plus the 24-voice wavetable) in place of **Franky**.
 
 ## Status
 
-Experimental. **It has not run on a board yet.** It builds without timing
-violations with Gowin 1.9.12.03 and 1.9.11.03 Education, and every simulation
-bench passes (`tools/sim/README.md`; results in [MOONSOUND.md](MOONSOUND.md)).
-Next step: the board test on a WonderTANG 2.02b (MoonBlaster / MBWave and
-their wave RAM detection, Nextor and the microSD, SCC, OPLL, SFG-01, the
-debugger, HDMI) and setting the OPL4 level in the mix by ear.
+Experimental. It builds without timing violations with Gowin 1.9.12.03 and
+1.9.11.03 Education, and every simulation bench passes (`tools/sim/README.md`;
+results in [MOONSOUND.md](MOONSOUND.md)).
+
+First board tests (5 Oct 2026, one WonderTANG 2.02b in an MSXBOOK, whose
+OCM-PLD has its own 4 MB mapper): a build of this branch's sources
+(`f3e4a2c`) **boots**; the bitstream versioned in `impl/pnr/` (`16a9664`,
+which still read the mapper back with bit 7 set) **does not**. See
+[Board results](#board-results). Still to check on the board: the MoonSound
+itself (MoonBlaster / MBWave and their wave RAM detection), SCC, OPLL,
+SFG-01, the debugger, HDMI, and the OPL4 level in the mix, by ear.
 
 ## Why this repository is private
 
@@ -87,7 +92,9 @@ reformatted.
 | `63eb5be` | Board bench: measure the bus release from the design's own /RD |
 | `bb90bcc` | Docs: I2S framing, mapper read-back, place-and-route options, bench results |
 | `16a9664` | Build: route option 2, from a place-and-route sweep with both tool versions |
-| revert | Memory map: read the mapper registers back as written again, like New Juice (safer next to a bigger internal mapper, e.g. the 4 MB of an OCM / MSXBOOK) |
+| `a36475a` | Bitstream: version the fork's own bitstream, byte for byte |
+| `658349c`, `1f02ec3` | Benches: fail on a stale simulation; `.gitignore`: keep any YRW801 out |
+| `f3e4a2c` | Memory map: read the mapper registers back as written again, like New Juice (reverts `c02d2a4`; this is the build that boots on the MSXBOOK) |
 
 New Juice files touched: `src/top.v`, `src/top.sdc`, `new-juice.gprj`,
 `src/rpll/rpll_main.v` (CLKOUTD3 brought out), `src/sdram_mapper.v`,
@@ -99,8 +106,11 @@ three-line notice at the top of `README.md`. New: `src/moonsound/`,
 
 Some of these changes are useful to New Juice even without the MoonSound:
 the I2S framing (`5d6fcce`), the saturating mix (`d48c9a4`, `4f88f85`) and the
-timing change of the memory clients (`58636d1`). How the MoonSound is built
-in, and why, is explained in [MOONSOUND.md](MOONSOUND.md).
+timing change of the memory clients (`58636d1`). One more, not applied in
+this branch yet, is timing the SDRAM pins: see
+[Note for New Juice](#note-for-new-juice-the-sdram-pins-are-not-timed). How
+the MoonSound is built in, and why, is explained in
+[MOONSOUND.md](MOONSOUND.md).
 
 ## Memory maps
 
@@ -179,6 +189,146 @@ build. After any change, read "Numbers of Setup Violated Endpoints" and
 "Numbers of Hold Violated Endpoints" in `impl/pnr/new-juice_tr_content.html`:
 the summary of the IDE can show no TNS while a clock-domain crossing fails.
 
+Gowin does not time the SDRAM pins in any of these builds: New Juice's SDC
+leaves them unconstrained, and so does this branch. The next two sections
+say what that means and what was measured.
+
+## Board results
+
+One WonderTANG 2.02b in an MSXBOOK (OCM-PLD with its own 4 MB internal
+mapper), with the same ROMs and YRW801 in the flash; only the bitstream at
+0x000000 changed. Each build was tried once.
+
+| Build | Sources | Gowin, Place / Route | MD5 of the `.fs` | On the MSXBOOK |
+|---|---|---|---|---|
+| upstream | New Juice's own bitstream (`306ca0e`, 1.9.11.03 Education) | author's | `638086e3b7b9d514f1bd6551a39fab6e` | boots |
+| M0 | `306ca0e` (New Juice) | 1.9.12.03, 1 / 2 | `605fe317e28265917e100c6908f108c3` | boots |
+| B2 | `8ebe679` (arbiter, OPL4 not hooked up) | 1.9.12.03, 1 / 2 | `1fd5465162108687cdc99289c4594351` | does not boot (no BIOS) |
+| B3 | `58636d1` (OPL4 hooked up) | 1.9.12.03, 1 / 2 | `ea2f799972d5c118a96b5e76b83f366f` | not tried yet |
+| B4 | `c02d2a4` (B3 + mapper read-back with bit 7 set) | 1.9.12.03, 1 / 2 | `57ece881eb1c380fa2e09b8041439e92` | boots |
+| fork | `16a9664` (bit 7 set; the bitstream in `impl/pnr/`) | 1.9.12.03, 1 / 2 | `c2ef5122bdc7ca1033023a451b08b045` | boot loop: the BIOS looks for RAM again and again, the SD never stops |
+| Y1 | `16a9664` | 1.9.12.03, 0 / 1 | `a3d0917f9bdbbd45c683f8746dd00447` | MSX logo, then nothing |
+| Y2 | `16a9664` | 1.9.12.03, 0 / 2 | `ddc6253b09ed2b8a5b723d2e887434ff` | not tried yet |
+| X1 | `16a9664` without bit 7 = the sources of `f3e4a2c` | 1.9.12.03, 1 / 2 | `276425bea832b1272213ce9a55dcfe29` | **boots** |
+
+- The file first tried as "B3" was New Juice's own bitstream from upstream
+  (its header says 1.9.11.03 Education; its MD5 is that of
+  `impl/pnr/new-juice.fs` at `306ca0e` with CRLF line ends). The real B3
+  build has not been tried. The commit message of `f3e4a2c` says that
+  builds of the same sources boot or not depending on the placement; that
+  rested on this mix-up and **is not supported** by the results: the only
+  pair of the same sources tried, fork and Y1, fails both times.
+- What the results do show: with the mapper registers read back with bit 7
+  set, the fork fails in both placements tried, and without it (X1) it
+  boots. The MSXBOOK has its own 4 MB mapper and takes the cartridge's
+  answer to IN FCh-FFh (New Juice drives /BUSDIR there, `cd_demux.v`), so a
+  page number with bit 7 forced to 1 can send it to the wrong segment. The
+  exception is B4, which boots with bit 7 set; it differs from the fork in
+  the bus release (`b0045c0`) and the audio changes, and was tried once.
+- B2 fails for a reason still unknown. It is the only failing build that
+  could be an SDRAM fault: the fork reaches the SD, so the ROMs were copied,
+  and New Juice copies them only after its SDRAM start-up test has passed
+  (`flash_roms` `.load_enable(startup_test_passed)` in `src/top.v`). Until
+  that test passes the LED shows the test pattern; after it, SD activity.
+- Next tests: B3 (real), Y2, X1 in other placements, each build several
+  times from cold, noting what the LED does; and on the MSXBOOK
+  `OUT &HFC,5 : PRINT INP(&HFC)` with B4 (133 = it reads the cartridge's
+  answer).
+
+## The SDRAM interface
+
+`src/sdram.v` (nand2mario's controller) runs at main_clk (108 MHz); the SDRAM
+clock is rpll_main CLKOUTP, 180 degrees later. READ leaves on edge E2, the
+die samples it at S2 = E2 + T/2, with CAS latency 3 it drives the word tAC
+after S4 and holds it tOH after S5, and the clients capture `dout32` (the
+pins, combinational) on E6 = S4 + 1.5 T. `src/top.sdc` has the SDRAM clock
+commented out and no input or output delay on any SDRAM pin, so Gowin
+never checks any of this.
+
+To see whether that explains the boot failures, the eight builds above were
+placed and routed again with the post-PnR SDF on (each bitstream identical
+to the tried one except for the build time in its header), the SDRAM paths
+were measured from the SDF, and an SDC that times them was written and
+checked against Gowin's own report (to 0.035 ns). Gowin does not publish the
+die's timing; the numbers are those of an equivalent 64 Mbit x32 SDR part at
+CL3, -6 grade: tAC 6.0, tOH 2.5, tIS 1.5, tIH 1.0 ns, plus 0.2 ns of bond
+wire mismatch. Worst slack, slow corner (typical in brackets), ns:
+
+| Build | Board | Write data (DQ) | Address | Command, BA, DQM | Read capture setup / hold | Arbiter wave read (`wv_dout`) |
+|---|---|---|---|---|---|---|
+| M0 | boots | -0.368 (+0.357) | +2.024 | +2.866 | +1.488 / +1.555 | — |
+| B2 | fails | -1.624 (-0.640) | +1.262 | +2.866 | the same | — |
+| B4 | boots | -0.883 (-0.037) | +0.720 | +2.866 | the same | -1.468 |
+| fork | fails | -0.640 (+0.145) | +0.946 | +2.866 | the same | -1.225 |
+| Y1 | fails | **+0.626** (+1.076) | +1.173 | +2.866 | the same | -1.119 |
+| X1 | boots | -0.097 (+0.567) | +1.020 | +2.866 | the same | -0.984 |
+
+- The read capture (`read_data_reg` of `sdram_command_adapter`) is packed in
+  the I/O cells in every build (the report's "I/O Register as FF 66/363"),
+  and so are command, BA and DQM: their timing is the same in all builds.
+- What moves with the placement is the write data and its output enable:
+  `dq_out` feeds two pins per bit (`{din,din}`), so it cannot go in the I/O
+  cell. `wv_dout` is negative in every build with the arbiter, booting or
+  not, and only serves the OPL4's wave reads.
+- **The numbers do not separate the builds that boot from those that
+  fail**: Y1 has the best write margin and fails; B4 and X1 have worse ones
+  and boot. The SDRAM interface is not the cause of the boot failures seen
+  so far.
+
+The SDC is kept out of this branch for now. With it, `f3e4a2c` reports 17
+setup violations (write DQ down to -0.130, `wv_dout` -1.022). Closing them
+needs an RTL change too: one `dq_out` and one `dq_oen` register per pin
+(kept with `syn_preserve`) and an I/O-cell capture of the pins on every
+edge, which moves `data_ready` and `busy` one clock later. That version has
+0 setup and 0 hold violations in Place 1 / Route 2 and in Place 0 / Route 1
+(write DQ +2.833, read +1.451 / +1.320, address +0.747 and +1.140, main_clk
+Fmax 115.2 and 109.9 MHz) and passes the `arb` and `map` benches, but every
+read takes one clock more: CPU `cmd_en`->ack 10 -> 11 clocks at least, the
+worst case at 7.16 MHz 139 -> 157 ns, in a design that serves the Z80
+without /WAIT. It is hygiene, not a boot fix, and it waits for board time.
+The only real measure of the die's margin is a sweep of the CLKOUTP phase
+(PSDA_SEL, 16 steps) on the board with a longer start-up test.
+
+## Note for New Juice: the SDRAM pins are not timed
+
+This applies to New Juice as it is upstream, and is worth telling
+lfantoniosi. Its `src/top.sdc` comments out the SDRAM clock and constrains
+no SDRAM pin, so Gowin never times that interface and its reports say
+nothing about it. Measured on New Juice's sources built with 1.9.12.03
+Place 1 / Route 2 (M0 above): reads, commands, BA and DQM sit in the I/O
+cells and have margin (read +1.488 / +1.555, commands +2.866), but the
+write data has -0.368 ns in the slow corner (+0.357 typical), and that path
+lands wherever the placer puts it, build after build. That build boots and
+no failure has been traced to it, so this is unchecked margin, not a known
+bug. New Juice's own bitstream (1.9.11.03) was not measured.
+
+What would time it, written for `src/top.sdc` (the clock names are New
+Juice's; the latency of the SDRAM clock at its pin, 11.455 / 7.398 ns, was
+taken from the SDF and is the same in every build, because Gowin treats a
+clock on a port as ideal):
+
+```
+create_generated_clock -name sdram_clk -source [get_ports {clkin}] -master_clock clkin -divide_by 1 -multiply_by 4 -phase 180 -add [get_pins {rpll_main/rpll_inst/CLKOUTP}]
+create_generated_clock -name sdram_clk_pin -source [get_pins {rpll_main/rpll_inst/CLKOUTP}] -master_clock sdram_clk -divide_by 1 -multiply_by 1 -add [get_ports {O_sdram_clk}]
+// (and add sdram_clk sdram_clk_pin to main_clk's group in set_clock_groups)
+set_output_delay -clock sdram_clk_pin -max -9.755 [get_ports {O_sdram_addr[*] O_sdram_ba[*] O_sdram_dqm[*] O_sdram_cas_n O_sdram_ras_n O_sdram_wen_n O_sdram_cs_n O_sdram_cke IO_sdram_dq[*]}]
+set_output_delay -clock sdram_clk_pin -min -8.598 [get_ports {O_sdram_addr[*] O_sdram_ba[*] O_sdram_dqm[*] O_sdram_cas_n O_sdram_ras_n O_sdram_wen_n O_sdram_cs_n O_sdram_cke IO_sdram_dq[*]}]
+set_input_delay -clock sdram_clk_pin -max 17.655 [get_ports {IO_sdram_dq[*]}]
+set_input_delay -clock sdram_clk_pin -min 9.698 [get_ports {IO_sdram_dq[*]}]
+set_multicycle_path -from [get_ports {IO_sdram_dq[*]}] -to [get_clocks {main_clk}] -setup -end 2
+```
+
+- Outputs: max = tIS + 0.2 - 11.455 = -9.755; min = -(tIH + 0.2) - 7.398 =
+  -8.598. Inputs: max = 11.455 + 0.2 + tAC = 17.655; min = 7.398 - 0.2 +
+  tOH = 9.698. The `-add` matters: without it Gowin 1.9.12 drops the port
+  clock (TA1119) and then every I/O delay fails.
+- With the SDC alone the write data shows as violated; to meet it, give
+  `sdram.v` one write register and one output-enable register per pin, as
+  described in the previous section. In this fork the per-pin write
+  registers alone pushed the read capture out of the I/O cells (read setup
+  -1.855 ns), so the read capture had to move into its own I/O register as
+  well, which costs the clock of read latency.
+
 ## Building and flashing
 
 ```
@@ -199,6 +349,13 @@ the `.bin` `d7c70facd0137f651f9d25352f46c779`). `.gitattributes` keeps both
 byte for byte, so a checkout gives exactly those checksums. The other files
 under `impl/` (reports, synthesis netlist) are still New Juice's from
 upstream until the next build overwrites them.
+
+**That bitstream does not boot on the MSXBOOK** (it is "fork" in
+[Board results](#board-results)). The one that boots is X1, built from the
+sources of `f3e4a2c` with the same tool and options (`.fs` MD5
+`276425bea832b1272213ce9a55dcfe29`; timing 0 / 0 violated endpoints, worst
+setup +0.832 ns, worst hold +0.074 ns); it has not replaced the versioned
+one yet. Until it does, do not use `make reprogram` on an MSXBOOK.
 
 - `make reprogram` writes that file as it is, without building: only
   openFPGALoader is needed. This is what New Juice's README tells a new user
@@ -246,7 +403,10 @@ whether the image is a YRW801 (the LED warning above).
 
 The details are in [MOONSOUND.md](MOONSOUND.md). In short:
 
-- Not run on a board yet.
+- Tried on one board only (an MSXBOOK), and only up to booting: see
+  [Board results](#board-results).
+- Gowin does not time the SDRAM pins: see
+  [The SDRAM interface](#the-sdram-interface).
 - IN 7Fh holds the Z80 with /WAIT, which reaches the slot about 194 ns after
   /IORQ: in time at 3.58 MHz, too late at 5.37 MHz or above, where a stale
   byte can be read (MoonTANG behaves the same). Register writes, which is

@@ -1,4 +1,4 @@
-> **NewJuice-MoonSound fork (private, experimental, not yet tested on a board):**
+> **NewJuice-MoonSound fork (private, experimental, only its boot tried on a board so far):**
 > Franky is replaced by a MoonSound (OPL4) and the mapper is 2 MB. Read
 > [FORK.md](FORK.md) before using anything below; the rest is New Juice's own README.
 

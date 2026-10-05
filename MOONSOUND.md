@@ -61,7 +61,10 @@ Worst setup slack (all in main_clk, 108 MHz) and violated endpoints:
 | **1 / 2** (also 2 / 2), project setting | **+0.779 ns, 0 / 0** | +0.578 ns, 0 / 0 |
 
 Every build closes: 0 setup and 0 hold violated endpoints, worst hold slack
-+0.074 ns, no clock-domain crossing among the 25 worst setup paths. The
++0.074 ns, no clock-domain crossing among the 25 worst setup paths. That
+covers only what the SDC constrains: the SDRAM pins are not constrained (as
+in New Juice), so these reports say nothing about them; they were measured
+apart from the SDF (see below). The
 project uses `Place_Option = 1`, `Route_Option = 2`
 (`impl/new-juice_process_config.json`), the best of the sweep with both
 versions. With 1.9.12 P1/R2 the other clocks have, as Fmax against the
@@ -76,6 +79,29 @@ check the timing report after any change. After every build read "Numbers
 of Setup Violated Endpoints" and "Numbers of Hold Violated Endpoints" in the
 timing report (`impl/pnr/new-juice_tr_content.html`): the summary table of
 the IDE can show no TNS while a clock-domain crossing fails.
+
+## SDRAM interface timing
+
+Measured on the eight builds tried on the board, from their post-PnR SDF
+(the method, the table and the proposed SDC are in
+[FORK.md](FORK.md#the-sdram-interface)). In short:
+
+- Read capture (`sdram_command_adapter` `read_data_reg`), command, BA and
+  DQM are packed in the I/O cells in every build: setup +1.488 / hold
+  +1.555 ns for reads, +2.866 ns for commands, the same in all builds, with
+  the die timing assumed (tAC 6.0, tOH 2.5, tIS 1.5, tIH 1.0 ns, 0.2 ns of
+  bond-wire mismatch).
+- The write data and its output enable cannot go in the I/O cells
+  (`dq_out` feeds two pins per bit) and move with the placement: from
+  -1.624 to +0.626 ns in the slow corner. The arbiter's own capture of the
+  pins (`wv_dout`, OPL4 wave reads only) is negative in every build, -0.98
+  to -1.47 ns, slow corner.
+- None of these numbers separates the builds that boot from those that
+  fail, so the SDRAM interface is not the cause of the MSXBOOK boot
+  failures. The arbiter could still take a wrong wave word in a slow
+  corner; the fix (per-pin write and output-enable registers, I/O-cell
+  capture, one clock more of read latency) is described in FORK.md and not
+  applied.
 
 ## Simulation
 
@@ -95,8 +121,10 @@ Results on this branch (WSL Ubuntu-24.04, Icarus 12, sv2v):
 
 ## Known limits
 
-- Not run on a board yet. Everything above comes from simulation and from
-  the Gowin reports.
+- On the board only the boot has been tried, on one MSXBOOK: the build of
+  `f3e4a2c` boots, the versioned bitstream (`16a9664`) does not; see
+  [FORK.md](FORK.md#board-results). Everything else above comes from
+  simulation and from the Gowin reports.
 - Franky is gone: SMS games and the sound scope no longer work. The mapper is
   2 MB, not 4 MB. The wave RAM is 1 MB (the free SDRAM is 1.84 MB, not 2).
 - New Juice serves the Z80 without /WAIT. In the board bench a mapper read
