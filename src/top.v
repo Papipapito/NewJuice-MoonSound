@@ -579,6 +579,28 @@ module top
     wire native_sdram_data_ready;
     wire native_sdram_busy;
     wire native_sdram_enabled;
+    // MoonSound fork: SDRAM arbiter between the adapter and the controller
+    wire arb_a_busy;
+    wire arb_a_data_ready;
+    wire arb_s_rd;
+    wire arb_s_wr;
+    wire arb_s_refresh;
+    wire [22:0] arb_s_addr;
+    wire [15:0] arb_s_din;
+    wire [1:0] arb_s_wdm;
+    wire opl4_wv_req;
+    wire opl4_wv_we;
+    wire [21:0] opl4_wv_addr;
+    wire [7:0] opl4_wv_wdata;
+    wire [15:0] opl4_wv_dout;
+    wire opl4_wv_done;
+    wire opl4_rom_write_en;
+    // no wave client yet
+    assign opl4_wv_req = 1'b0;
+    assign opl4_wv_we = 1'b0;
+    assign opl4_wv_addr = 22'd0;
+    assign opl4_wv_wdata = 8'd0;
+    assign opl4_rom_write_en = 1'b0;
     reg [2:0] psg_cpu_clk_sync = 3'b000;
     (* syn_preserve = 1, ASYNC_REG = "TRUE" *)
     reg [2:0] psg_synth_enable_sync = 3'b000;
@@ -1506,9 +1528,44 @@ module top
         .din(native_sdram_din),
         .wdm(native_sdram_wdm),
         .dout32(native_sdram_dout32),
-        .data_ready(native_sdram_data_ready),
-        .busy(native_sdram_busy),
+        .data_ready(arb_a_data_ready),
+        .busy(arb_a_busy),
         .enabled(native_sdram_enabled)
+    );
+
+    // MoonSound fork: the adapter (CPU + Z80-paced refresh) shares the
+    // controller with the MoonSound wave memory, and a refresh timer keeps
+    // the SDRAM refreshed even if the Z80 stops issuing RFSH cycles.
+    nj_sdram_arb sdram_arbiter_inst(
+        .clk(main_clk),
+        .rst_n(board_enabled),
+        .a_rd(native_sdram_rd),
+        .a_wr(native_sdram_wr),
+        .a_refresh(native_sdram_refresh),
+        .a_addr(native_sdram_addr),
+        .a_din(native_sdram_din),
+        .a_wdm(native_sdram_wdm),
+        .a_busy(arb_a_busy),
+        .a_data_ready(arb_a_data_ready),
+        .cpu_sltsl_n(sltsl_n_in),
+        .cpu_rd_n(rd_n_in),
+        .wv_req(opl4_wv_req),
+        .wv_we(opl4_wv_we),
+        .wv_addr(opl4_wv_addr),
+        .wv_wdata(opl4_wv_wdata),
+        .wv_dout(opl4_wv_dout),
+        .wv_done(opl4_wv_done),
+        .rom_write_en(opl4_rom_write_en),
+        .s_rd(arb_s_rd),
+        .s_wr(arb_s_wr),
+        .s_refresh(arb_s_refresh),
+        .s_addr(arb_s_addr),
+        .s_din(arb_s_din),
+        .s_wdm(arb_s_wdm),
+        .s_dout32(native_sdram_dout32),
+        .s_data_ready(native_sdram_data_ready),
+        .s_busy(native_sdram_busy),
+        .own_refresh()
     );
 
     sdram
@@ -1535,12 +1592,12 @@ module top
         .clk(main_clk),
         .clk_sdram(sdram_clk),
         .resetn(board_enabled),
-        .rd(native_sdram_rd),
-        .wr(native_sdram_wr),
-        .refresh(native_sdram_refresh),
-        .addr(native_sdram_addr),
-        .din(native_sdram_din),
-        .wdm(native_sdram_wdm),
+        .rd(arb_s_rd),
+        .wr(arb_s_wr),
+        .refresh(arb_s_refresh),
+        .addr(arb_s_addr),
+        .din(arb_s_din),
+        .wdm(arb_s_wdm),
         .dout(native_sdram_dout),
         .dout32(native_sdram_dout32),
         .data_ready(native_sdram_data_ready),

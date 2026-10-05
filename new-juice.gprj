@@ -105,6 +105,7 @@
         <File path="src/slot_expander.v" type="file.verilog" enable="1"/>
         <File path="src/spi_flash_reader.v" type="file.verilog" enable="1"/>
         <File path="src/super_megaram.v" type="file.verilog" enable="1"/>
+        <File path="src/moonsound/nj_sdram_arb.v" type="file.verilog" enable="1"/>
         <File path="src/top.v" type="file.verilog" enable="1"/>
         <File path="src/top.cst" type="file.cst" enable="1"/>
         <File path="src/top.sdc" type="file.sdc" enable="1"/>
