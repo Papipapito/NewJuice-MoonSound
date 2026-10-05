@@ -172,6 +172,16 @@ module tb_map;
     endtask
     reg [7:0] mrd;
     reg       mrd_ok;
+    task io_in(input [7:0] p);
+        begin
+            @(posedge clk_108m); b_addr <= {8'h00, p};
+            @(posedge clk_108m); b_iorq_n <= 1'b0; b_rd_n <= 1'b0;
+            repeat (30) @(posedge clk_108m);
+            mrd = map_dout; mrd_ok = map_dout_en;
+            b_iorq_n <= 1'b1; b_rd_n <= 1'b1;
+            repeat (10) @(posedge clk_108m);
+        end
+    endtask
     task mem_rd(input [15:0] a);
         begin
             @(posedge clk_108m); b_addr <= a; b_sltsl_n <= 1'b0;
@@ -248,6 +258,17 @@ module tb_map;
         $display("  paginas distintas: %0d (%0d KB), lecturas inesperadas %0d", cnt, cnt * 16, bad);
         chk(cnt == 128, "la deteccion de tamano del mapper da 128 paginas = 2 MB");
         chk(bad == 0, "las paginas 80h-FFh son el reflejo de 00h-7Fh, como un mapper de 2 MB real");
+        // port read-back: bit 7 (unused on 128 pages) reads as 1, as on a real
+        // 2 MB mapper, so sizing by read-back also gives 128 pages
+        bad = 0;
+        io_out(8'hFE, 8'h05); io_in(8'hFE); if (!(mrd_ok && mrd === 8'h85)) bad = bad + 1;
+        $display("  OUT FEh,05h -> IN FEh = %h", mrd);
+        io_out(8'hFC, 8'h13); io_in(8'hFC); if (!(mrd_ok && mrd === 8'h93)) bad = bad + 1;
+        io_out(8'hFD, 8'h85); io_in(8'hFD); if (!(mrd_ok && mrd === 8'h85)) bad = bad + 1;
+        io_out(8'hFF, 8'h00); io_in(8'hFF); if (!(mrd_ok && mrd === 8'h80)) bad = bad + 1;
+        $display("  OUT FFh,00h -> IN FFh = %h (bits fijos a 1 = %0d paginas)", mrd, 256 - {mrd[7], 7'd0});
+        chk(bad == 0, "IN FCh-FFh devuelve el registro con el bit 7 a 1 (relectura del puerto = 128 paginas)");
+        io_out(8'hFC, 8'h03); io_out(8'hFD, 8'h02); io_out(8'hFF, 8'h00);
         io_out(8'hFE, 8'h01);  // pages back to something harmless
 
         // ============ 2. wave memory map ============
