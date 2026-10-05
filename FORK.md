@@ -20,8 +20,9 @@ results in [MOONSOUND.md](MOONSOUND.md)).
 
 First board tests (5 Oct 2026, one WonderTANG 2.02b in an MSXBOOK, whose
 OCM-PLD has its own 4 MB mapper): a build of this branch's sources
-(`f3e4a2c`) **boots**; the bitstream versioned in `impl/pnr/` (`16a9664`,
-which still read the mapper back with bit 7 set) **does not**. See
+(`f3e4a2c`, the bitstream now versioned in `impl/pnr/`) **boots**; the one
+built from `16a9664` (which still read the mapper back with bit 7 set) **does
+not**. Each was tried once, so an intermittent failure is not ruled out yet. See
 [Board results](#board-results). Still to check on the board: the MoonSound
 itself (MoonBlaster / MBWave and their wave RAM detection), SCC, OPLL,
 SFG-01, the debugger, HDMI, and the OPL4 level in the mix, by ear.
@@ -343,19 +344,16 @@ make yrw801 YRW801=/path/to/yrw801.rom    # your own YRW801 image to flash 0x200
 
 The repository carries a built bitstream, as New Juice does:
 `impl/pnr/new-juice.fs` and `.bin` are this fork's bitstream for the board
-test (Gowin 1.9.12.03, Place 1 / Route 2, sources of `bb90bcc` plus the route
-option of `16a9664`; MD5 of the `.fs` `c2ef5122bdc7ca1033023a451b08b045`, of
-the `.bin` `d7c70facd0137f651f9d25352f46c779`). `.gitattributes` keeps both
+test (X1: Gowin 1.9.12.03, Place 1 / Route 2, sources of `f3e4a2c`; MD5 of
+the `.fs` `276425bea832b1272213ce9a55dcfe29`, of the `.bin`
+`f2fc3ffd2d2d64d757edfa589ada2862`; 0 / 0 violated endpoints, worst setup
++0.832 ns). `.gitattributes` keeps both
 byte for byte, so a checkout gives exactly those checksums. The other files
 under `impl/` (reports, synthesis netlist) are still New Juice's from
 upstream until the next build overwrites them.
 
-**That bitstream does not boot on the MSXBOOK** (it is "fork" in
-[Board results](#board-results)). The one that boots is X1, built from the
-sources of `f3e4a2c` with the same tool and options (`.fs` MD5
-`276425bea832b1272213ce9a55dcfe29`; timing 0 / 0 violated endpoints, worst
-setup +0.832 ns, worst hold +0.074 ns); it has not replaced the versioned
-one yet. Until it does, do not use `make reprogram` on an MSXBOOK.
+It is X1 in [Board results](#board-results), the build that boots on the
+MSXBOOK; it replaced the `16a9664` build ("fork" there), which does not.
 
 - `make reprogram` writes that file as it is, without building: only
   openFPGALoader is needed. This is what New Juice's README tells a new user
