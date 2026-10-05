@@ -41,7 +41,7 @@ SDRAM (8 MB):
 
 | Range | Contents |
 |---|---|
-| 0x000000-0x1FFFFF | memory mapper (2 MB; pages 80h-FFh mirror 00h-7Fh) |
+| 0x000000-0x1FFFFF | memory mapper (2 MB; pages 80h-FFh mirror 00h-7Fh; IN FCh-FFh reads bit 7 as 1, like a real 2 MB mapper) |
 | 0x200000-0x3FFFFF | YRW801 copy (MoonSound wave addresses 0x000000-0x1FFFFF) |
 | 0x400000-0x5FFFFF | Super-MegaRAM (unchanged) |
 | 0x600000-0x627FFF | ROM copies (unchanged) |
@@ -93,22 +93,32 @@ copy fails or the image is not the YRW801, the LED gives a short flash every
   mix at the OPLL level; the sum now saturates instead of wrapping around. The
   I2S amplifier gets the mono mix at 48.2 kHz (108 MHz / 70 / 32); HDMI gets
   the stereo mix.
+- I2S framing: New Juice's `audio_drive` changed WS together with the MSB,
+  which is left-justified framing (MAX98357B). The Tang Nano 20K has a
+  MAX98357A (I2S), which therefore read every word one bit late: twice the
+  level, wrapping around above half scale. WS now changes one BCLK before the
+  MSB and BCLK goes out inverted, so DIN/WS change on its falling edge (the
+  108 MHz serializer otherwise gave 9.3 ns of hold, the amplifier needs 10).
+  The amplifier now gets the whole mix saturated, which is the level the
+  old framing produced (New Juice's sources were balanced by ear at it);
+  HDMI keeps its own x2.
 
 ## Resources and timing
 
 Measured with this branch (one place-and-route each, project options as in
-`impl/new-juice_process_config.json`):
+`impl/new-juice_process_config.json`; the 1.9.12 column is after the I2S,
+mapper read-back and bus-release fixes, the 1.9.11 one just before them):
 
 | | New Juice (author's bitstream, 1.9.11) | This fork, Gowin 1.9.12.03 | This fork, Gowin 1.9.11.03 Edu |
 |---|---|---|---|
-| Logic | 12546 / 20736 (61 %) | 17075 (83 %) | 17292 (84 %) |
-| CLS | 9002 / 10368 (87 %) | 9886 (96 %) | 9877 (96 %) |
+| Logic | 12546 / 20736 (61 %) | 17188 (83 %) | 17292 (84 %) |
+| CLS | 9002 / 10368 (87 %) | 9907 (96 %) | 9877 (96 %) |
 | BSRAM | 46 / 46 | 31 / 46 | 31 / 46 |
 | DSP | 2 | 3.5 | 3.5 |
 | Global clocks (PRIMARY) | 3 / 8 | 5 / 8 | 5 / 8 |
 | rPLL | 2 / 2 | 2 / 2 (no new PLL) | 2 / 2 |
 | Setup / hold violated endpoints | 0 / 0 | **0 / 0** | **0 / 0** |
-| main_clk (108 MHz) worst setup slack | +0.065 ns | +0.22 ns | +1.51 ns |
+| main_clk (108 MHz) worst setup slack | +0.065 ns | +0.20 ns | +1.51 ns |
 | PCM engine clock (36 MHz) Fmax | — | 47.8 MHz | 42.6 MHz |
 
 The tightest path is still New Juice's own: from the bus snapshot
@@ -117,6 +127,17 @@ clients. Its slack moves by about 1 ns from build to build; the last commit
 before the docs takes the start decision off the enables of the request
 registers, which is what made both tool versions close. With the chip at
 96 % CLS, expect to check the timing report after any change.
+
+Closure depends on the place-and-route options. The project keeps
+`Place_Option = 1` and `Route_Option = 1` (`impl/new-juice_process_config.json`);
+keep them. With the same sources, 1.9.12 with Place 0 / Route 2 left one
+setup endpoint at -0.028 ns on that same New Juice path
+(`mp_debouncer_inst/latched_10_s0` -> `flash_roms_inst/state_0_s1`), while
+1.9.12 P2/R2 and 1.9.11 P0/R2 and P2/R2 closed. After every build read
+"Numbers of Setup Violated Endpoints" and "Numbers of Hold Violated
+Endpoints" in the timing report (`impl/pnr/new-juice_tr_content.html`): the
+summary table of the IDE can show no TNS while a clock-domain crossing
+fails.
 
 ## Simulation
 
@@ -128,9 +149,10 @@ Results on this branch (WSL Ubuntu-24.04, Icarus 12, sv2v):
 |---|---|
 | Arbiter with the real chain, Z80 at 3.58 / 5.37 / 7.16 MHz, 24 voices (`blocks/run_blocks.sh arb`, 12 runs) | 12/12 PASS: no CPU command lost, no wrong data on either side. CPU read `cmd_en`->ack 93 ns without the MoonSound; with it at most 102 ns (3.58 MHz) and 139 ns (5.37 / 7.16 MHz); without the CPU-read hint it was 167-176 ns. PCM output rate 1.000 in all normal cases; 0.71-0.72 with 24 voices of 16-bit samples at high pitch |
 | Refresh with the Z80 stopped 70 ms (`refresh`) | PASS: one refresh every 7.8 us, no decayed row; negative control (own refresh off) PASS: the model reports 6838 decayed rows |
-| Memory map (`map`) | 15/15 PASS |
+| Memory map (`map`) | 16/16 PASS (now also the read-back of FCh-FFh with bit 7 at 1) |
+| I2S transmitter (`i2s`) | PASS: every word exact through an I2S receiver, both halves equal, a left-justified receiver does not decode it, DIN/WS 315 ns setup / 333 ns hold around the rising BCLK edge, 48.2 kHz. The previous `audio_drive` fails three of the four checks (8/64 words, 9.26 ns hold) |
 | New Juice's OPLL without sv2v (`opll`) | PASS (+-4085) |
-| Whole board (`board/run_board.sh`) | 65/65 PASS: boot with New Juice's start-up test and ROM copy through the arbiter, YRW801 copy (synthetic 4 KB) and checksum, FM status/register read-back/timer /INT, wave ID and memory through 7Eh/7Fh with /WAIT, wave RAM at SDRAM 0x700000, nothing above 1 MB, 2 MB mapper, Super-MegaRAM, Nextor ROM, LINEAR mode, OPLL writes, PCM and FM to the I2S amplifier at 48.2 kHz with both halves of every frame equal, YRW801 kept across an MSX /RESET, no illegal SDRAM command, no decayed row |
+| Whole board (`board/run_board.sh`) | 68/68 PASS: boot with New Juice's start-up test and ROM copy through the arbiter, YRW801 copy (synthetic 4 KB) and checksum, FM status/register read-back/timer /INT, wave ID and memory through 7Eh/7Fh with /WAIT, wave RAM at SDRAM 0x700000, nothing above 1 MB, 2 MB mapper, Super-MegaRAM, Nextor ROM, LINEAR mode, OPLL writes, PCM and FM to the I2S amplifier at 48.2 kHz decoded as I2S with both halves of every frame equal and every word exactly the mix sample, the mono mix saturating at 7FFFh/8000h, the OPL4 releasing the bus at the same time as New Juice's own ports (10 ns after the design's /RD, both), YRW801 kept across an MSX /RESET, no illegal SDRAM command, no decayed row |
 | Whole board, flash without YRW801 (`run_board.sh blank`) | 12/12 PASS: the checksum flags the image and the LED flashes |
 
 ## Known limits
