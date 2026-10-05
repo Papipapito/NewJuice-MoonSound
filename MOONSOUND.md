@@ -105,39 +105,47 @@ copy fails or the image is not the YRW801, the LED gives a short flash every
 
 ## Resources and timing
 
-Measured with this branch (one place-and-route each, project options as in
-`impl/new-juice_process_config.json`; the 1.9.12 column is after the I2S,
-mapper read-back and bus-release fixes, the 1.9.11 one just before them):
+Measured on this branch with both tool versions and every place-and-route
+option the tools accept for this device (Gowin silently turns Place 3 and 4
+into Place 0 here, and Place 2 gives exactly the same placement as Place 1, so
+the 18 builds below are 10 different implementations, 5 per tool version):
 
 | | New Juice (author's bitstream, 1.9.11) | This fork, Gowin 1.9.12.03 | This fork, Gowin 1.9.11.03 Edu |
 |---|---|---|---|
-| Logic | 12546 / 20736 (61 %) | 17188 (83 %) | 17292 (84 %) |
-| CLS | 9002 / 10368 (87 %) | 9907 (96 %) | 9877 (96 %) |
+| Logic | 12546 / 20736 (61 %) | 17188 (83 %) | 17246 (83 %) |
+| CLS | 9002 / 10368 (87 %) | 9907-9950 (96 %) | 9825-9899 (95 %) |
+| Registers | | 9523 | 9192 |
 | BSRAM | 46 / 46 | 31 / 46 | 31 / 46 |
 | DSP | 2 | 3.5 | 3.5 |
-| Global clocks (PRIMARY) | 3 / 8 | 5 / 8 | 5 / 8 |
+| Global clocks (PRIMARY / LW) | 3 / 8 | 5 / 8, 8 / 8 | 5 / 8, 8 / 8 |
 | rPLL | 2 / 2 | 2 / 2 (no new PLL) | 2 / 2 |
-| Setup / hold violated endpoints | 0 / 0 | **0 / 0** | **0 / 0** |
-| main_clk (108 MHz) worst setup slack | +0.065 ns | +0.20 ns | +1.51 ns |
-| PCM engine clock (36 MHz) Fmax | — | 47.8 MHz | 42.6 MHz |
 
-The tightest path is still New Juice's own: from the bus snapshot
+Worst setup slack (all in main_clk, 108 MHz) and violated endpoints:
+
+| Place / Route | 1.9.12.03 | 1.9.11.03 Edu |
+|---|---|---|
+| 0 / 1 (also 3 / 1, 4 / 1) | +0.094 ns, 0 / 0 | +1.014 ns, 0 / 0 |
+| 0 / 2 | +0.406 ns, 0 / 0 | +0.451 ns, 0 / 0 |
+| 1 / 0 | +0.019 ns, 0 / 0 | +0.300 ns, 0 / 0 |
+| 1 / 1 (also 2 / 1) | +0.202 ns, 0 / 0 | +0.060 ns, 0 / 0 |
+| **1 / 2** (also 2 / 2), project setting | **+0.779 ns, 0 / 0** | +0.578 ns, 0 / 0 |
+
+Every build closes: 0 setup and 0 hold violated endpoints, worst hold slack
++0.074 ns, no clock-domain crossing among the 25 worst setup paths. The
+project uses `Place_Option = 1`, `Route_Option = 2`
+(`impl/new-juice_process_config.json`), the best of the sweep with both
+versions. With 1.9.12 P1/R2 the other clocks have, as Fmax against the
+constraint: opl4_clk54 95.2 / 54 MHz, PCM engine (opl4_clk_eng) 41.5 / 36 MHz,
+clkin (OPM, OPLL, PSG) 53.9 / 27 MHz, cpu_clk 67.4 / 3.58 MHz.
+
+The tightest paths are still New Juice's own: from the bus snapshot
 (`mp_debouncer`) through the slot decode to the SDRAM request of the memory
-clients. Its slack moves by about 1 ns from build to build; the last commit
-before the docs takes the start decision off the enables of the request
-registers, which is what made both tool versions close. With the chip at
-96 % CLS, expect to check the timing report after any change.
-
-Closure depends on the place-and-route options. The project keeps
-`Place_Option = 1` and `Route_Option = 1` (`impl/new-juice_process_config.json`);
-keep them. With the same sources, 1.9.12 with Place 0 / Route 2 left one
-setup endpoint at -0.028 ns on that same New Juice path
-(`mp_debouncer_inst/latched_10_s0` -> `flash_roms_inst/state_0_s1`), while
-1.9.12 P2/R2 and 1.9.11 P0/R2 and P2/R2 closed. After every build read
-"Numbers of Setup Violated Endpoints" and "Numbers of Hold Violated
-Endpoints" in the timing report (`impl/pnr/new-juice_tr_content.html`): the
-summary table of the IDE can show no TNS while a clock-domain crossing
-fails.
+clients, or the SD register read-back. Their slack moves by up to 1 ns from
+one place-and-route option to another; with the chip at 96 % CLS, expect to
+check the timing report after any change. After every build read "Numbers
+of Setup Violated Endpoints" and "Numbers of Hold Violated Endpoints" in the
+timing report (`impl/pnr/new-juice_tr_content.html`): the summary table of
+the IDE can show no TNS while a clock-domain crossing fails.
 
 ## Simulation
 

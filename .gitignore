@@ -2,3 +2,6 @@
 # MoonSound fork: never commit the YRW801 wave ROM (copyright Yamaha)
 roms/yrw801*
 roms/YRW801*
+
+# Local deliverables (bitstreams for testing), never committed
+files/
