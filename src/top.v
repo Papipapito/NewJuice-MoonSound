@@ -368,10 +368,14 @@ module top
     // main pll
     wire main_clk;
     wire sdram_clk;
+    wire opl4_clk54;
+    wire opl4_clk_eng;
     rpll_main rpll_main(
         .clkout(main_clk), // 108 MHz main clock
         .lock(rpll_main_lock), 
         .clkoutp(sdram_clk), // 108 MHz rotated SDRAM clock
+        .clkoutd(opl4_clk54), // 54 MHz, MoonSound bus side
+        .clkoutd3(opl4_clk_eng), // 36 MHz, MoonSound PCM engine
         .reset(~pll_run_reset_n),
         .clkin(clkin) //input clkin (27Mhz)
     );
@@ -595,12 +599,23 @@ module top
     wire [15:0] opl4_wv_dout;
     wire opl4_wv_done;
     wire opl4_rom_write_en;
-    // no wave client yet
-    assign opl4_wv_req = 1'b0;
-    assign opl4_wv_we = 1'b0;
-    assign opl4_wv_addr = 22'd0;
-    assign opl4_wv_wdata = 8'd0;
-    assign opl4_rom_write_en = 1'b0;
+    wire [7:0] opl4_rd_data;
+    wire opl4_rd_active;
+    wire opl4_wait_n;
+    wire opl4_int_n;
+    wire signed [15:0] opl4_mix_l;
+    wire signed [15:0] opl4_mix_r;
+    wire signed [15:0] opl4_mix_mono;
+    wire opl4_flash_owned;
+    wire opl4_mspi_cs;
+    wire opl4_mspi_sclk;
+    wire opl4_mspi_mosi;
+    wire nj_mspi_cs;
+    wire nj_mspi_sclk;
+    wire nj_mspi_mosi;
+    wire opl4_wl_done;
+    wire opl4_wl_error;
+    wire opl4_wl_badimg;
     reg [2:0] psg_cpu_clk_sync = 3'b000;
     (* syn_preserve = 1, ASYNC_REG = "TRUE" *)
     reg [2:0] psg_synth_enable_sync = 3'b000;
@@ -1411,10 +1426,10 @@ module top
         .data_out_en(flash_rom_data_out_en),
         .wait_n(flash_rom_wait_n),
         .loaded(flash_rom_loaded),
-        .mspi_cs(mspi_cs),
-        .mspi_sclk(mspi_sclk),
+        .mspi_cs(nj_mspi_cs),
+        .mspi_sclk(nj_mspi_sclk),
         .mspi_miso(mspi_miso),
-        .mspi_mosi(mspi_mosi),
+        .mspi_mosi(nj_mspi_mosi),
         .sdrc_cmd_en(rom_sdrc_cmd_en),
         .sdrc_cmd(rom_sdrc_cmd),
         .sdrc_addr(rom_sdrc_addr),
@@ -1471,6 +1486,7 @@ module top
     wire sd_drive_en =
         active_module_reset_n && sd_data_out_en;
     wire jt51_drive_en = active_module_reset_n && jt51_status_read;
+    wire opl4_drive_en = active_module_reset_n && opl4_rd_active;
 
     assign data_out =
         ({8{slot_drive_en}} & slot_expander_data_out) |
@@ -1479,21 +1495,23 @@ module top
         ({8{linear_drive_en}} & linear_data_out) |
         ({8{bios_drive_en}} & flash_rom_data_out) |
         ({8{sd_drive_en}} & sd_data_out) |
-        ({8{jt51_drive_en}} & jt51_data_out);
+        ({8{jt51_drive_en}} & jt51_data_out) |
+        ({8{opl4_drive_en}} & opl4_rd_data);
 
     assign data_out_en =
         slot_drive_en || mapper_drive_en || smr_drive_en ||
         linear_drive_en ||
-        bios_drive_en || sd_drive_en || jt51_drive_en;
+        bios_drive_en || sd_drive_en || jt51_drive_en || opl4_drive_en;
 
     assign mapper_port_read =
         (active_module_reset_n && !iorq_n && m1_n && !rd_n &&
-         addr[7:2] == 6'b111111);
+         addr[7:2] == 6'b111111) ||
+        opl4_drive_en;
     
     cd_demux cd_demux_inst(
         .data_out(data_out),
         .data_out_en(data_out_en),
-        .wait_in_n(memory_wait_n && step_debug_wait_n),
+        .wait_in_n(memory_wait_n && step_debug_wait_n && opl4_wait_n),
         .rd_n(rd_n),
         .sltsl_n(sltsl_n),
         .mapper_port_read(mapper_port_read),
@@ -1531,6 +1549,55 @@ module top
         .data_ready(arb_a_data_ready),
         .busy(arb_a_busy),
         .enabled(native_sdram_enabled)
+    );
+
+    // ---------------------------------------------------------------------
+    // MoonSound (OPL4): FM C4h-C7h, wavetable 7Eh-7Fh, wave memory in SDRAM
+    // ---------------------------------------------------------------------
+    // The SPI flash belongs to flash_roms until New Juice's ROMs are loaded;
+    // then the MoonSound copies the YRW801 (flash 0x200000) to the SDRAM in
+    // the background, with the CPU running.
+    assign mspi_cs = opl4_flash_owned ? opl4_mspi_cs : nj_mspi_cs;
+    assign mspi_sclk = opl4_flash_owned ? opl4_mspi_sclk : nj_mspi_sclk;
+    assign mspi_mosi = opl4_flash_owned ? opl4_mspi_mosi : nj_mspi_mosi;
+
+    moonsound_nj moonsound_inst (
+        .clk_108m(main_clk),
+        .clk_54m(opl4_clk54),
+        .clk_eng(opl4_clk_eng),
+        .lock_main(rpll_main_lock),
+        .sys_rst_n(board_reset_n),
+        .iorq_n(iorq_n),
+        .rd_n(rd_n),
+        .wr_n(wr_n),
+        .m1_n(m1_n),
+        .addr(addr[7:0]),
+        .din(cd_in),
+        .slot_reset_n(reset_in_n),
+        .slot_clk(cpu_clk),
+        .rd_data(opl4_rd_data),
+        .rd_active(opl4_rd_active),
+        .wait_n(opl4_wait_n),
+        .int_n(opl4_int_n),
+        .mix_l(opl4_mix_l),
+        .mix_r(opl4_mix_r),
+        .mix_mono(opl4_mix_mono),
+        .flash_start(flash_rom_loaded),
+        .flash_owned(opl4_flash_owned),
+        .mspi_cs(opl4_mspi_cs),
+        .mspi_sclk(opl4_mspi_sclk),
+        .mspi_mosi(opl4_mspi_mosi),
+        .mspi_miso(mspi_miso),
+        .wv_req(opl4_wv_req),
+        .wv_we(opl4_wv_we),
+        .wv_addr(opl4_wv_addr),
+        .wv_wdata(opl4_wv_wdata),
+        .wv_dout(opl4_wv_dout),
+        .wv_done(opl4_wv_done),
+        .rom_write_en(opl4_rom_write_en),
+        .wl_done(opl4_wl_done),
+        .wl_error(opl4_wl_error),
+        .wl_badimg(opl4_wl_badimg)
     );
 
     // MoonSound fork: the adapter (CPU + Z80-paced refresh) shares the
@@ -1608,13 +1675,19 @@ module top
     // Interrupt sources are active low. int_out drives the board-level
     // inverter below, matching WonderTANG's external polarity.
     assign int_n =
-        (opll_module_reset_n ? jt51_irq_n : 1'b1);
+        (opll_module_reset_n ? jt51_irq_n : 1'b1) && opl4_int_n;
 
     assign int_out = ~int_n;
     assign wait_out = ~wait_n;
 
     // Before the SDRAM test passes, preserve its failure-code blinker.
     // Afterwards the LED indicates an active SD-card command.
-    assign led = startup_test_passed ? sd_busy : startup_test_led;
+    // MoonSound fork: if the YRW801 copy failed or the flash at 0x200000 does
+    // not hold the YRW801 (checksum), the LED also gives a short flash every
+    // 1.2 s. The FM part and the wave RAM still work.
+    reg [26:0] yrw_blink = 27'd0;
+    always_ff @(posedge main_clk) yrw_blink <= yrw_blink + 1'b1;
+    wire yrw_led = (opl4_wl_error || opl4_wl_badimg) && (yrw_blink[26:23] == 4'd0);
+    assign led = startup_test_passed ? (sd_busy || yrw_led) : startup_test_led;
 
 endmodule

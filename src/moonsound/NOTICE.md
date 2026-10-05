@@ -19,9 +19,11 @@ keep them intact.
 | New Juice glue: bus, clocks, flash hand-over, mix | `moonsound_nj.sv` | Albert "Papipapito" with Claude | GPL-3.0 |
 | SDRAM arbiter with its own refresh timer | `nj_sdram_arb.v` | Albert "Papipapito" with Claude | GPL-3.0 |
 
-License headers added in this fork: `flash_rw.v` (the BSD-2 notice of the
-WonderTANG `flash.v` it derives from) and `opl4fm.v` (the BSD-3 notice of the
-MangOPL4 wrapper it adapts). The code below those headers is unchanged.
+Changes in this fork: license headers added to `flash_rw.v` (the BSD-2
+notice of the WonderTANG `flash.v` it derives from) and `opl4fm.v` (the BSD-3
+notice of the MangOPL4 wrapper it adapts), with the code below them unchanged;
+and `opl3/opl3_pkg.sv` retuned from 27 to 36 MHz (CLK_FREQ, CLK_DIV_COUNT and
+the two timer tick counts; marked in the file).
 
 Because `afifo.v` (GPL-3.0) is part of the FM core, this folder as a whole is
 GPL-3.0. The rest of New Juice is lfantoniosi's work and keeps his terms; this

@@ -21,9 +21,12 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
+// New Juice MoonSound fork (2026, Albert "Papipapito" with Claude): the core
+// runs at 36 MHz (rpll_main CLKOUTD3). Changed: CLK_FREQ, CLK_DIV_COUNT and
+// the two TIMERn_TICK_COUNT values. LGPL-3.0, like the original.
 package opl3_pkg;
     // MangOPL4: 134.25 MHz / 4 = 33.5625 MHz (CLKDIV en u_div_opl3)
-    localparam CLK_FREQ = 27e6; // MSXimus _84: clk_27m del PLLA principal (hermano del bus: CDC emparentado, sin 3er PLL)
+    localparam CLK_FREQ = 36e6; // New Juice MoonSound: rpll_main CLKOUTD3 (MoonTANG/MSXimus: 27e6)
     localparam DAC_OUTPUT_WIDTH = 24;
     localparam INSTANTIATE_TIMERS = 1; // MangOPL4: ON para detección OPL3 (Timer1+Timer2 + status bits)
     localparam NUM_LEDS = 4; // connected to kon bank 0 starting at 0
@@ -31,7 +34,7 @@ package opl3_pkg;
 
     // MangOPL4: 33.5625 MHz / 678 ≈ 49.502 kHz (vs 49.516 kHz MoonSound nominal)
     localparam DESIRED_SAMPLE_FREQ = 49.516e3;
-    localparam CLK_DIV_COUNT = 545; // 27e6/545 = 49541 Hz (+0.05% vs 49516 nominal)
+    localparam CLK_DIV_COUNT = 727; // 36e6/727 = 49519 Hz (+0.005% vs 49516 nominal); 27 MHz: 545
     localparam ACTUAL_SAMPLE_FREQ = CLK_FREQ/CLK_DIV_COUNT;
 
     localparam NUM_REG_PER_BANK = 'hF6;
@@ -74,8 +77,8 @@ package opl3_pkg;
     // valor erróneo, lo que ralentiza Timer1 ~30x y rompe la base de
     // tiempo de VGMPlay-MSX (música reproduce muy lenta).
     // 33.5625e6 Hz * 80e-6 s = 2685 ; * 320e-6 = 10740
-    localparam int TIMER1_TICK_COUNT = 2160;  // 80us a 27MHz EXACTO
-    localparam int TIMER2_TICK_COUNT = 8640;  // 320us a 27MHz EXACTO
+    localparam int TIMER1_TICK_COUNT = 2880;  // 80us a 36MHz EXACTO (27 MHz: 2160)
+    localparam int TIMER2_TICK_COUNT = 11520; // 320us a 36MHz EXACTO (27 MHz: 8640)
 
     typedef enum logic [2:0] {
         OP_NORMAL,

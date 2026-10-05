@@ -7,16 +7,16 @@
 //Device Version: C
 //Created Time: Wed Jul  8 00:54:33 2026
 
-module rpll_main (clkout, lock, clkoutp, clkoutd, reset, clkin);
+module rpll_main (clkout, lock, clkoutp, clkoutd, clkoutd3, reset, clkin);
 
 output clkout;
 output lock;
 output clkoutp;
 output clkoutd;
+output clkoutd3;
 input reset;
 input clkin;
 
-wire clkoutd3_o;
 wire gw_vcc;
 wire gw_gnd;
 
@@ -28,7 +28,7 @@ rPLL rpll_inst (
     .LOCK(lock),
     .CLKOUTP(clkoutp),
     .CLKOUTD(clkoutd),
-    .CLKOUTD3(clkoutd3_o),
+    .CLKOUTD3(clkoutd3),
     .RESET(reset),
     .RESET_P(gw_gnd),
     .CLKIN(clkin),
