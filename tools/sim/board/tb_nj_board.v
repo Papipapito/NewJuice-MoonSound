@@ -610,7 +610,7 @@ module tb_nj_board;
         mem_rd(16'h8123, 8'h5A);
         ok(mem_bad == 0, "la pagina 05h devuelve el mismo byte");
         io_rd(16'h00FE);
-        ok(rd_driven && rdv === 8'h85, "IN FEh devuelve el registro del mapper con el bit 7 a 1 (2 MB)");
+        ok(rd_driven && rdv === 8'h05, "IN FEh devuelve el registro del mapper");
 
         $display("== H. Super-MegaRAM (subslot 2) ==");
         mem_wr(16'hFFFF, 8'h20);                    // page 2 -> subslot 2

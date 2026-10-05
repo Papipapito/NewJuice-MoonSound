@@ -186,11 +186,8 @@ module sdram_mapper
         end
     end
 
-    // MoonSound fork: a 2 MB mapper (128 pages) reads its unused page bit 7
-    // back as 1, like real 2 MB mappers (and openMSX), so software that sizes
-    // the mapper by reading the port back sees 128 pages, not 256.
     assign data_out =
-        mapper_port_read ? (mapper_page[mapper_port_page] | 8'h80) :
+        mapper_port_read ? mapper_page[mapper_port_page] :
         read_data;
     assign data_out_en = mapper_port_read || (read_data_active && access_is_read && memory_read_held);
     assign wait_n = !memory_access_selected || (sdrc_init_done && state == STATE_DONE);

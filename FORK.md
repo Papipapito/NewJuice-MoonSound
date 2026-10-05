@@ -55,8 +55,10 @@ been sent.
 - **Franky**: SMS games and anything else that uses its VDP or its SN76489.
 - **The sound scope** on HDMI. The debugger terminal on HDMI stays.
 - **Half of the mapper**: 2 MB (128 pages) instead of 4 MB. Pages 80h-FFh
-  mirror 00h-7Fh, and IN FCh-FFh reads bit 7 as 1, like a real 2 MB
-  mapper.
+  mirror 00h-7Fh. IN FCh-FFh returns the register as written, like New
+  Juice: a machine with a bigger internal mapper (an OCM / MSXBOOK has 4 MB)
+  takes the cartridge's answer, and a page number with bit 7 forced to 1
+  could send its software to the wrong segment.
 
 To go back to New Juice, write its own bitstream at flash 0x000000. Its ROMs
 stay where they were, and the YRW801 at 0x200000 does not bother it.
@@ -78,13 +80,14 @@ reformatted.
 | `fb323e5` | SDC: keep the HDMI serializer reset untimed after the Franky removal |
 | `58636d1` | Timing: load the SDRAM request registers while idle, off the start decision |
 | `1637932` | Documentation, `make yrw801` target and simulation benches (`tools/sim/`) |
-| `c02d2a4` | Memory map: read the mapper registers back with bit 7 set |
+| `c02d2a4` | Memory map: read the mapper registers back with bit 7 set (**reverted**, see below) |
 | `b0045c0` | MoonSound: release the bus when /RD or /IORQ go up, like New Juice's ports |
 | `5d6fcce` | Audio: I2S framing and mid-bit BCLK for the MAX98357A |
 | `4f88f85` | Audio: send the whole saturated mix to the amplifier |
 | `63eb5be` | Board bench: measure the bus release from the design's own /RD |
 | `bb90bcc` | Docs: I2S framing, mapper read-back, place-and-route options, bench results |
 | `16a9664` | Build: route option 2, from a place-and-route sweep with both tool versions |
+| revert | Memory map: read the mapper registers back as written again, like New Juice (safer next to a bigger internal mapper, e.g. the 4 MB of an OCM / MSXBOOK) |
 
 New Juice files touched: `src/top.v`, `src/top.sdc`, `new-juice.gprj`,
 `src/rpll/rpll_main.v` (CLKOUTD3 brought out), `src/sdram_mapper.v`,
