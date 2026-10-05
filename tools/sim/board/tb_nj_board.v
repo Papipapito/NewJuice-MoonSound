@@ -34,6 +34,9 @@ module tb_nj_board;
     //  The MSX
     // ------------------------------------------------------------------
     reg        msx_on = 1'b0;
+    reg        psg_was_x = 1'b0, opll_was_x = 1'b0;
+    reg [15:0] sat_pos, sat_neg;
+    integer    spk_pos, spk_neg;
     reg        clk358 = 1'b0;
     always #(TH) if (msx_on) clk358 = ~clk358; else clk358 = 1'b0;
 
@@ -657,8 +660,8 @@ module tb_nj_board;
         // them to 0 so that the OPL4 -> mix -> I2S path can be checked.
         if (^fpga.u_top.scc_audio_sample === 1'bx) begin force fpga.u_top.scc_audio_sample = 16'sd0; $display("         [info] SCC en X en la simulacion: se fija a 0"); end
         if (^fpga.u_top.jt51_audio_sample === 1'bx) begin force fpga.u_top.jt51_audio_sample = 16'sd0; $display("         [info] OPM (JT51) en X en la simulacion: se fija a 0"); end
-        if (^fpga.u_top.psg_audio_sample === 1'bx) begin force fpga.u_top.psg_audio_sample = 16'sd0; $display("         [info] PSG en X en la simulacion: se fija a 0"); end
-        if (^fpga.u_top.opll_audio_sample === 1'bx) begin force fpga.u_top.opll_audio_sample = 16'sd0; $display("         [info] OPLL en X en la simulacion: se fija a 0"); end
+        if (^fpga.u_top.psg_audio_sample === 1'bx) begin force fpga.u_top.psg_audio_sample = 16'sd0; psg_was_x = 1'b1; $display("         [info] PSG en X en la simulacion: se fija a 0"); end
+        if (^fpga.u_top.opll_audio_sample === 1'bx) begin force fpga.u_top.opll_audio_sample = 16'sd0; opll_was_x = 1'b1; $display("         [info] OPLL en X en la simulacion: se fija a 0"); end
         if (^fpga.u_top.keyclick_audio_sample === 1'bx) begin force fpga.u_top.keyclick_audio_sample = 16'sd0; $display("         [info] keyclick en X en la simulacion: se fija a 0"); end
         wv_w(8'h20, 8'h00); wv_w(8'h38, 8'h00); wv_w(8'h50, 8'h01);
         wv_w(8'h08, 8'h00);
@@ -700,6 +703,25 @@ module tb_nj_board;
         ok(spk_max > 300 && spk_min < -300, "y tambien se oye por el ampli mono");
         ok(fpga.u_top.audio_sample_hold_right != fpga.u_top.audio_sample_hold_left || 1'b1, "HDMI recibe L/R por separado");
         fm_w(0, 8'hB0, 8'h12);
+
+        // the mono mix to the amplifier saturates (PSG + OPLL + OPL4 well
+        // beyond full scale, both signs) and goes out at full level by I2S
+        force fpga.u_top.psg_audio_sample = 16'sh3000;
+        force fpga.u_top.opll_audio_sample = 16'sh7000;
+        force fpga.u_top.opl4_mix_mono = 16'sh2000;
+        #150_000;
+        sat_pos = fpga.u_top.mixed_audio_sample; spk_pos = spk;
+        force fpga.u_top.psg_audio_sample = -16'sh3000;
+        force fpga.u_top.opll_audio_sample = -16'sh7000;
+        force fpga.u_top.opl4_mix_mono = -16'sh2000;
+        #150_000;
+        sat_neg = fpga.u_top.mixed_audio_sample; spk_neg = spk;
+        $display("         mezcla mono saturada: +%h / -%h -> altavoz %0d / %0d", sat_pos, sat_neg, spk_pos, spk_neg);
+        ok(sat_pos === 16'h7FFF && sat_neg === 16'h8000 && spk_pos == 32767 && spk_neg == -32768,
+           "la mezcla del ampli satura en vez de dar la vuelta y llega asi por I2S");
+        if (psg_was_x) force fpga.u_top.psg_audio_sample = 16'sd0; else release fpga.u_top.psg_audio_sample;
+        if (opll_was_x) force fpga.u_top.opll_audio_sample = 16'sd0; else release fpga.u_top.opll_audio_sample;
+        release fpga.u_top.opl4_mix_mono;
 
         // ==============================================================
         $display("== L. lecturas de memoria SIN /WAIT (mapper), sin y con el motor PCM sonando ==");

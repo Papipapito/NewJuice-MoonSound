@@ -937,6 +937,17 @@ module top
         {audio_mix_wide_q[17], audio_mix_wide_q} +
         {{3{opl4_mix_r[15]}}, opl4_mix_r};
 
+    function automatic [15:0] audio_sat;
+        input signed [18:0] v;
+        begin
+            // v saturated to 16 bits
+            if (v[18:15] == 4'b0000 || v[18:15] == 4'b1111)
+                audio_sat = v[15:0];
+            else
+                audio_sat = v[18] ? 16'h8000 : 16'h7FFF;
+        end
+    endfunction
+
     function automatic [15:0] audio_half_sat;
         input signed [18:0] v;
         begin
@@ -951,7 +962,11 @@ module top
     always_ff @(posedge main_clk)
     begin
         audio_mix_wide_q <= audio_mix_wide;
-        mixed_audio_sample_q <= audio_half_sat(audio_mix_mono_wide);
+        // The amplifier gets the whole sum, saturated: with the old
+        // left-justified framing the MAX98357A read sum/2 one bit late, i.e.
+        // at the level of the whole sum (wrapping), and that is the level New
+        // Juice's sources were balanced at. HDMI keeps sum/2 and its x2 below.
+        mixed_audio_sample_q <= audio_sat(audio_mix_mono_wide);
         mixed_audio_left_q <= audio_half_sat(audio_mix_left_wide);
         mixed_audio_right_q <= audio_half_sat(audio_mix_right_wide);
     end
