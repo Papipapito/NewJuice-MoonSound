@@ -83,18 +83,6 @@
         <File path="src/jtopl/hdl/jt2413.v" type="file.verilog" enable="1"/>
         <File path="src/rpll/rpll_main.v" type="file.verilog" enable="1"/>
         <File path="src/rpll/rpll_video.v" type="file.verilog" enable="1"/>
-        <File path="src/SMS/jt89/jt89_mixer.v" type="file.verilog" enable="1"/>
-        <File path="src/SMS/jt89/jt89_noise.v" type="file.verilog" enable="1"/>
-        <File path="src/SMS/jt89/jt89_tone.v" type="file.verilog" enable="1"/>
-        <File path="src/SMS/jt89/jt89_vol.v" type="file.verilog" enable="1"/>
-        <File path="src/SMS/jt89/jt89.v" type="file.verilog" enable="1"/>
-        <File path="src/SMS/vdp_background.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/SMS/vdp_sprite_shifter.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/SMS/vdp_sprites.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/SMS/vdp_main.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/SMS/vdp_cram.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/SMS/vdp.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/SMS/video.vhd" type="file.vhdl" enable="1"/>
         <File path="src/hdmi/audio_clock_regeneration_packet.sv" type="file.verilog" enable="1"/>
         <File path="src/hdmi/audio_info_frame.sv" type="file.verilog" enable="1"/>
         <File path="src/hdmi/audio_sample_packet.sv" type="file.verilog" enable="1"/>
@@ -115,7 +103,6 @@
         <File path="src/debug_trace_terminal.v" type="file.verilog" enable="1"/>
         <File path="src/sdram_startup_test.v" type="file.verilog" enable="1"/>
         <File path="src/slot_expander.v" type="file.verilog" enable="1"/>
-        <File path="src/sound_scope.v" type="file.verilog" enable="1"/>
         <File path="src/spi_flash_reader.v" type="file.verilog" enable="1"/>
         <File path="src/super_megaram.v" type="file.verilog" enable="1"/>
         <File path="src/top.v" type="file.verilog" enable="1"/>

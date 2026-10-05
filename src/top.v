@@ -290,8 +290,6 @@ module top
     wire signed [15:0] keyclick_audio_sample;
     wire signed [10:0] scc_sound;
     wire signed [15:0] scc_audio_sample;
-    wire signed [10:0] jt89_sound;
-    wire signed [15:0] jt89_audio_sample;
     wire signed [17:0] audio_mix_wide;
     wire [15:0] mixed_audio_sample;
     reg [15:0] audio_sample_hold = 16'd0;
@@ -402,8 +400,6 @@ module top
     wire video_clk_135_raw;
     wire video_clk_135;
     wire rpll_video_lock;
-    wire sms_clk_54_raw;
-    wire sms_clk_54;
 
     rpll_video rpll_video_inst (
         .clkout(video_clk_135_raw),
@@ -416,18 +412,6 @@ module top
     BUFG video_clk_135_buf (
         .O(video_clk_135),
         .I(video_clk_135_raw)
-    );
-
-    clockdiv2 sms_clock_divider (
-        .clk_src(main_clk),
-        .reset_n(board_reset_n),
-        .clk_div(sms_clk_54_raw),
-        .clk_rise()
-    );
-
-    BUFG sms_clk_54_buf (
-        .O(sms_clk_54),
-        .I(sms_clk_54_raw)
     );
 
     // audio_req is asserted for one audio bit-clock cycle before audio_drive
@@ -871,18 +855,14 @@ module top
     // controls every transition and therefore the resulting frequency.
     assign keyclick_audio_sample =
         keyclick_level ? 16'sh1000 : 16'sd0;
-    // Scale the 11-bit SCC and JT89 outputs into the same useful range.
+    // Scale the 11-bit SCC output into the same useful range.
     // This exact sample feeds both the physical audio DAC and HDMI.
     assign scc_audio_sample = {{2{scc_sound[10]}}, scc_sound, 3'b000};
-    // JT89 is intentionally attenuated by one bit relative to the other
-    // sources before entering the shared mix.
-    assign jt89_audio_sample = {{2{jt89_sound[10]}}, jt89_sound, 3'b00};
     assign audio_mix_wide =
         {{2{psg_audio_sample[15]}}, psg_audio_sample} +
         {{2{opll_audio_sample[15]}}, opll_audio_sample} +
         {{3{jt51_audio_sample[15]}}, jt51_audio_sample[15:1]} +
         {{2{scc_audio_sample[15]}}, scc_audio_sample} +
-        {{2{jt89_audio_sample[15]}}, jt89_audio_sample} +
         {{2{keyclick_audio_sample[15]}}, keyclick_audio_sample};
     // JT51 is attenuated by 6 dB above after its stereo-to-mono average.
     // Reducing the complete mix by 6 dB then guarantees 16-bit headroom
@@ -890,20 +870,19 @@ module top
     assign mixed_audio_sample = audio_mix_wide[16:1];
 
     // ---------------------------------------------------------------------
-    // Franky / Sega Master System VDP and PSG
+    // HDMI video reset (MoonSound fork: Franky removed)
     // ---------------------------------------------------------------------
-    // Start the high-toggle SMS/HDMI logic after SDRAM and SD have left reset,
-    // so it is already stable before the mapper and the MSX bus are released.
-    // Its CPU port decode remains disabled until the full sequence completes.
+    // The SMS VDP, its SN76489, the 64Kx6 framebuffer and the sound scope
+    // (which drew into that framebuffer on the SMS raster) are gone. HDMI
+    // keeps the debugger terminal and the audio. The former SMS reset now
+    // only releases the HDMI logic, synchronized to its 27 MHz pixel clock.
     wire sms_reset_request_n =
         active_module_reset_n && rpll_video_lock;
     (* syn_preserve = 1, ASYNC_REG = "TRUE" *)
     reg [1:0] sms_reset_sync = 2'b00;
     wire sms_reset_n = sms_reset_sync[1];
 
-    // Assert immediately if either board clock is unavailable, but release
-    // reset only after two clean edges in the SMS domain.
-    always_ff @(posedge sms_clk_54 or negedge sms_reset_request_n)
+    always_ff @(posedge clk or negedge sms_reset_request_n)
     begin
         if (!sms_reset_request_n)
             sms_reset_sync <= 2'b00;
@@ -911,320 +890,8 @@ module top
             sms_reset_sync <= {sms_reset_sync[0], 1'b1};
     end
 
-    reg [4:0] sms_divider = 5'd0;
-    reg sms_ce_sp = 1'b0;
-    reg sms_ce_vdp = 1'b0;
-    reg sms_ce_pix = 1'b0;
-    reg sms_ce_cpu = 1'b0;
-    wire sms_ce_sp_buf;
-    wire sms_ce_vdp_buf;
-    wire sms_ce_pix_buf;
-    wire sms_ce_cpu_buf;
-
-    // 54 MHz / 30 timing wheel:
-    //   ce_sp  = 27.0 MHz, ce_vdp = 10.8 MHz,
-    //   ce_pix = 5.4 MHz, ce_cpu = 3.6 MHz.
-    always_ff @(negedge sms_clk_54 or negedge sms_reset_n)
-    begin
-        if (!sms_reset_n) begin
-            sms_divider <= 5'd0;
-            sms_ce_sp <= 1'b0;
-            sms_ce_vdp <= 1'b0;
-            sms_ce_pix <= 1'b0;
-            sms_ce_cpu <= 1'b0;
-        end else begin
-            sms_ce_sp <= sms_divider[0];
-            sms_ce_vdp <= 1'b0;
-            sms_ce_pix <= 1'b0;
-            sms_ce_cpu <= 1'b0;
-            sms_divider <= sms_divider + 1'b1;
-
-            case (sms_divider)
-                5'd4, 5'd14:
-                    sms_ce_vdp <= 1'b1;
-                5'd9: begin
-                    sms_ce_vdp <= 1'b1;
-                    sms_ce_pix <= 1'b1;
-                    sms_ce_cpu <= 1'b1;
-                end
-                5'd19: begin
-                    sms_ce_vdp <= 1'b1;
-                    sms_ce_pix <= 1'b1;
-                end
-                5'd24: begin
-                    sms_ce_vdp <= 1'b1;
-                    sms_ce_cpu <= 1'b1;
-                end
-                5'd29: begin
-                    sms_divider <= 5'd0;
-                    sms_ce_vdp <= 1'b1;
-                    sms_ce_pix <= 1'b1;
-                end
-                default: begin
-                end
-            endcase
-        end
-    end
-
-    // Match WonderTANG's Franky clocking: the four periodic clock-enable
-    // signals use dedicated global buffers before reaching the SMS cores.
-    // Keeping every consumer on the buffered copies also preserves their
-    // relative phase across the VDP, video timing, JT89 and bus bridge.
-    BUFG sms_ce_sp_bufg (
-        .O(sms_ce_sp_buf),
-        .I(sms_ce_sp)
-    );
-
-    BUFG sms_ce_vdp_bufg (
-        .O(sms_ce_vdp_buf),
-        .I(sms_ce_vdp)
-    );
-
-    BUFG sms_ce_pix_bufg (
-        .O(sms_ce_pix_buf),
-        .I(sms_ce_pix)
-    );
-
-    BUFG sms_ce_cpu_bufg (
-        .O(sms_ce_cpu_buf),
-        .I(sms_ce_cpu)
-    );
-
-    wire sms_vdp_selected =
-        sms_reset_n && !iorq_n && m1_n &&
-        addr[7:1] == 7'b1000100;
-    wire sms_psg_selected =
-        sms_reset_n && !iorq_n && m1_n &&
-        addr[7:1] == 7'b0100100;
-    // WonderTANG mirrors VDP reads through the nominal PSG ports 48h/49h.
-    // Writes to those ports still go only to the PSG.
-    wire sms_vdp_read_selected =
-        (sms_vdp_selected || sms_psg_selected) && !rd_n;
-    wire sms_vdp_access =
-        (sms_vdp_selected && (!rd_n || !wr_n)) ||
-        (sms_psg_selected && !rd_n);
-    reg sms_vdp_activated = 1'b0;
-
-    // The sound display owns the framebuffer until software first touches
-    // either SMS VDP port, including mirrored reads at 48h/49h. Once
-    // activated, SMS video owns it until the next board or external MSX reset.
-    // PSG writes do not switch it.
-    always_ff @(posedge main_clk or negedge board_reset_n)
-    begin
-        if (!board_reset_n || !reset_in_n)
-            sms_vdp_activated <= 1'b0;
-        else if (sms_vdp_access)
-            sms_vdp_activated <= 1'b1;
-    end
-
-    wire sms_vdp_rd_n;
-    wire sms_vdp_wr_n;
-    wire sms_psg_wr_n;
-    wire [7:0] sms_vdp_data_out;
-    wire [7:0] sms_bridge_read_data;
-    wire sms_bridge_read_data_en;
-    wire sms_vdp_rd_request_n =
-        sms_vdp_read_selected ? 1'b0 : 1'b1;
-    wire sms_vdp_wr_request_n =
-        (!wr_n && sms_vdp_selected) ? 1'b0 : 1'b1;
-    reg sms_vdp_rd_strobe_n = 1'b1;
-    reg sms_vdp_wr_strobe_n = 1'b1;
-    reg sms_prev_vdp_rd_n = 1'b1;
-    reg sms_prev_vdp_wr_n = 1'b1;
-
-    // WonderTANG's Franky bus interface holds each VDP request until the
-    // 54 MHz domain observes its edge, then releases it on a VDP enable.
-    always_ff @(posedge sms_clk_54 or negedge sms_reset_n)
-    begin
-        if (!sms_reset_n) begin
-            sms_vdp_rd_strobe_n <= 1'b1;
-            sms_vdp_wr_strobe_n <= 1'b1;
-            sms_prev_vdp_rd_n <= 1'b1;
-            sms_prev_vdp_wr_n <= 1'b1;
-        end else begin
-            if (sms_ce_vdp_buf) begin
-                sms_vdp_rd_strobe_n <= 1'b1;
-                sms_vdp_wr_strobe_n <= 1'b1;
-            end
-
-            if (sms_prev_vdp_rd_n != sms_vdp_rd_request_n) begin
-                sms_vdp_rd_strobe_n <= sms_vdp_rd_request_n;
-                sms_prev_vdp_rd_n <= sms_vdp_rd_request_n;
-            end
-
-            if (sms_prev_vdp_wr_n != sms_vdp_wr_request_n) begin
-                sms_vdp_wr_strobe_n <= sms_vdp_wr_request_n;
-                sms_prev_vdp_wr_n <= sms_vdp_wr_request_n;
-            end
-        end
-    end
-
-    assign sms_vdp_rd_n = sms_vdp_rd_strobe_n;
-    assign sms_vdp_wr_n = sms_vdp_wr_strobe_n;
-    assign sms_psg_wr_n =
-        (!wr_n && sms_psg_selected) ? 1'b0 : 1'b1;
-    assign sms_bridge_read_data = sms_vdp_data_out;
-    assign sms_bridge_read_data_en = sms_vdp_read_selected;
-
-    jt89 sms_psg_inst (
-        .rst(~sms_reset_n),
-        .clk(sms_clk_54),
-        .clk_en(sms_ce_cpu_buf),
-        .wr_n(sms_psg_wr_n),
-        .din(cd_in),
-        .mux(8'hFF),
-        .soundL(jt89_sound),
-        .soundR(),
-        .ready()
-    );
-
-    wire [8:0] sms_vdp_x;
-    wire [8:0] sms_vdp_y;
-    wire [11:0] sms_vdp_color;
-    wire sms_vdp_irq_n;
-    wire sms_vdp_mask_column;
-    wire sms_vdp_mode_m1;
-    wire sms_vdp_mode_m2;
-    wire sms_vdp_mode_m3;
-    wire sms_vdp_mode_m4;
-
-    vdp #(
-        .MAX_SPPL(7)
-    ) sms_vdp_inst (
-        .clk_sys(sms_clk_54),
-        .ce_vdp(sms_ce_vdp_buf),
-        .ce_pix(sms_ce_pix_buf),
-        .ce_sp(sms_ce_sp_buf),
-        .gg(1'b0),
-        .sp64(1'b0),
-        .HL(1'b0),
-        .RD_n(sms_vdp_rd_n),
-        .WR_n(sms_vdp_wr_n),
-        .IRQ_n(sms_vdp_irq_n),
-        .A(addr[7:0]),
-        .D_in(cd_in),
-        .D_out(sms_vdp_data_out),
-        .x(sms_vdp_x),
-        .y(sms_vdp_y),
-        .color(sms_vdp_color),
-        .mask_column(sms_vdp_mask_column),
-        .smode_M1(sms_vdp_mode_m1),
-        .smode_M2(sms_vdp_mode_m2),
-        .smode_M3(sms_vdp_mode_m3),
-        .smode_M4(sms_vdp_mode_m4),
-        .reset_n(sms_reset_n)
-    );
-
-    wire sms_vdp_hsync;
-    wire sms_vdp_vsync;
-    wire sms_vdp_hblank;
-    wire sms_vdp_vblank;
-
-    video sms_video_timing_inst (
-        .clk(sms_clk_54),
-        .ce_pix(sms_ce_pix_buf),
-        .pal(1'b0),
-        .gg(1'b0),
-        .border(1'b0),
-        .mask_column(sms_vdp_mask_column),
-        .smode_M1(sms_vdp_mode_m1),
-        .smode_M3(sms_vdp_mode_m3),
-        .x(sms_vdp_x),
-        .y(sms_vdp_y),
-        .hsync(sms_vdp_hsync),
-        .vsync(sms_vdp_vsync),
-        .hblank(sms_vdp_hblank),
-        .vblank(sms_vdp_vblank)
-    );
-
-    // Capture the SMS raster into a true dual-port framebuffer.  The write
-    // side remains wholly in the 54 MHz SMS domain; HDMI reads at 27 MHz.
-    reg [8:0] sms_fb_x = 9'h1FE;
-    reg [8:0] sms_fb_y = 9'd0;
-    wire [15:0] sms_fb_write_addr = {sms_fb_y[7:0], sms_fb_x[7:0]};
-    wire [5:0] sms_fb_read_data;
-    wire [5:0] sound_scope_pixel;
-    wire [5:0] sms_vdp_framebuffer_pixel =
-        {sms_vdp_color[11:10], sms_vdp_color[7:6], sms_vdp_color[3:2]};
-    reg [1:0] sms_vdp_activated_fb_sync = 2'b00;
-
-    always_ff @(posedge clk or negedge sms_reset_n)
-    begin
-        if (!sms_reset_n)
-            sms_vdp_activated_fb_sync <= 2'b00;
-        else
-            sms_vdp_activated_fb_sync <=
-                {sms_vdp_activated_fb_sync[0], sms_vdp_activated};
-    end
-
-    sound_scope sound_scope_inst (
-        .clk(clk),
-        .reset_n(sms_reset_n),
-        .x(sms_fb_x[7:0]),
-        .y(sms_fb_y[7:0]),
-        .psg_sample(psg_sound),
-        .scc_sample(scc_sound),
-        .opll_sample(opll_audio_sample),
-        .opm_sample(jt51_audio_sample),
-        .pixel(sound_scope_pixel)
-    );
-
-    always_ff @(posedge sms_clk_54 or negedge sms_reset_n)
-    begin
-        if (!sms_reset_n) begin
-            sms_fb_x <= 9'h1FE;
-            sms_fb_y <= 9'd0;
-        end else if (sms_ce_pix_buf) begin
-            sms_fb_x <= sms_fb_x + 1'b1;
-            if (sms_vdp_x == 9'd0) begin
-                sms_fb_x <= 9'h1FE;
-                sms_fb_y <= sms_fb_y + 1'b1;
-            end
-            if (sms_vdp_y == 9'd0)
-                sms_fb_y <= 9'd0;
-        end
-    end
-
     wire [9:0] hdmi_x;
     wire [9:0] hdmi_y;
-    reg [9:0] hdmi_x_offset = 10'd0;
-    reg [9:0] hdmi_y_offset = 10'd0;
-    wire [15:0] sms_fb_read_addr =
-        {hdmi_y_offset[8:1], hdmi_x_offset[8:1]};
-    wire hdmi_fb_window_active =
-        !hdmi_x_offset[9] &&
-        !hdmi_y_offset[9] &&
-        (hdmi_y_offset < 10'd384);
-
-    always_ff @(posedge clk or negedge sms_reset_n)
-    begin
-        if (!sms_reset_n) begin
-            hdmi_x_offset <= 10'd0;
-            hdmi_y_offset <= 10'd0;
-        end else begin
-            hdmi_x_offset <= hdmi_x - 10'd112;
-            hdmi_y_offset <= hdmi_y - 10'd44;
-        end
-    end
-
-    dpram #(
-        .widthad_a(16),
-        .width_a(6)
-    ) sms_framebuffer_inst (
-        .clock_a(clk),
-        .address_a(sms_fb_write_addr),
-        .wren_a(!sms_fb_x[8] && !sms_fb_y[8]),
-        .rden_a(1'b0),
-        .data_a(sms_vdp_activated_fb_sync[1] ?
-                sms_vdp_framebuffer_pixel : sound_scope_pixel),
-        .q_a(),
-        .clock_b(clk),
-        .address_b(sms_fb_read_addr),
-        .wren_b(1'b0),
-        .rden_b(1'b1),
-        .data_b(6'd0),
-        .q_b(sms_fb_read_data)
-    );
 
     wire sms_debug_terminal_pixel;
     generate
@@ -1261,14 +928,11 @@ module top
         end
     endgenerate
 
-    wire [7:0] hdmi_base_red =
-        hdmi_fb_window_active ? {sms_fb_read_data[1:0], 6'd0} : 8'd0;
-    wire [7:0] hdmi_base_green =
-        hdmi_fb_window_active ? {sms_fb_read_data[3:2], 6'd0} : 8'd0;
-    wire [7:0] hdmi_base_blue =
-        hdmi_fb_window_active ? {sms_fb_read_data[5:4], 6'd0} : 8'd0;
+    wire [7:0] hdmi_base_red = 8'd0;
+    wire [7:0] hdmi_base_green = 8'd0;
+    wire [7:0] hdmi_base_blue = 8'd0;
     // Debug mode owns the complete HDMI picture: white trace text on black.
-    // As soon as it is disabled the normal SMS VDP/sound-scope image resumes.
+    // Without Franky the picture is black when the debugger is off.
     wire [7:0] hdmi_red = step_debug_enabled ?
                           {8{sms_debug_terminal_pixel}} : hdmi_base_red;
     wire [7:0] hdmi_green = step_debug_enabled ?
@@ -1328,7 +992,7 @@ module top
         .AUDIO_RATE(44_100),
         .AUDIO_BIT_WIDTH(16),
         .VENDOR_NAME({"Unknown", 8'd0}),
-        .PRODUCT_DESCRIPTION({"Franky SMS", 48'd0}),
+        .PRODUCT_DESCRIPTION({"New Juice", 56'd0}),
         .SOURCE_DEVICE_INFORMATION(8'h00),
         .START_X(0),
         .START_Y(0),
@@ -1784,7 +1448,6 @@ module top
         flash_rom_data_out_en;
     wire sd_drive_en =
         active_module_reset_n && sd_data_out_en;
-    wire sms_drive_en = sms_bridge_read_data_en;
     wire jt51_drive_en = active_module_reset_n && jt51_status_read;
 
     assign data_out =
@@ -1794,18 +1457,16 @@ module top
         ({8{linear_drive_en}} & linear_data_out) |
         ({8{bios_drive_en}} & flash_rom_data_out) |
         ({8{sd_drive_en}} & sd_data_out) |
-        ({8{sms_drive_en}} & sms_bridge_read_data) |
         ({8{jt51_drive_en}} & jt51_data_out);
 
     assign data_out_en =
         slot_drive_en || mapper_drive_en || smr_drive_en ||
         linear_drive_en ||
-        bios_drive_en || sd_drive_en || sms_drive_en || jt51_drive_en;
+        bios_drive_en || sd_drive_en || jt51_drive_en;
 
     assign mapper_port_read =
         (active_module_reset_n && !iorq_n && m1_n && !rd_n &&
-         addr[7:2] == 6'b111111) ||
-        sms_vdp_read_selected;
+         addr[7:2] == 6'b111111);
     
     cd_demux cd_demux_inst(
         .data_out(data_out),
@@ -1887,12 +1548,9 @@ module top
         .enabled(native_sdram_enabled)
     );
 
-    // Franky's VDP interrupt is active low; the external cartridge signal is
-    // driven active high by the board-level inverter below.
-    // Franky's VDP supplies an active-low interrupt. int_out drives the
-    // board-level inverter below, matching WonderTANG's external polarity.
+    // Interrupt sources are active low. int_out drives the board-level
+    // inverter below, matching WonderTANG's external polarity.
     assign int_n =
-        (sms_reset_n ? sms_vdp_irq_n : 1'b1) &&
         (opll_module_reset_n ? jt51_irq_n : 1'b1);
 
     assign int_out = ~int_n;
