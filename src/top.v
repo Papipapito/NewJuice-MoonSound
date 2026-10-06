@@ -629,6 +629,11 @@ module top
     wire opl4_wl_done;
     wire opl4_wl_error;
     wire opl4_wl_badimg;
+    wire signed [15:0] opl4_vu_fm_l;
+    wire signed [15:0] opl4_vu_fm_r;
+    wire signed [15:0] opl4_vu_wave_l;
+    wire signed [15:0] opl4_vu_wave_r;
+    wire opl4_slot_alive;
     reg [2:0] psg_cpu_clk_sync = 3'b000;
     (* syn_preserve = 1, ASYNC_REG = "TRUE" *)
     reg [2:0] psg_synth_enable_sync = 3'b000;
@@ -998,6 +1003,9 @@ module top
 
     wire [9:0] hdmi_x;
     wire [9:0] hdmi_y;
+    // MoonSound fork: the VU meter picture (see below), shown whenever the
+    // debugger does not own the screen
+    wire [23:0] vu_rgb;
 
     wire sms_debug_terminal_pixel;
     generate
@@ -1034,11 +1042,12 @@ module top
         end
     endgenerate
 
-    wire [7:0] hdmi_base_red = 8'd0;
-    wire [7:0] hdmi_base_green = 8'd0;
-    wire [7:0] hdmi_base_blue = 8'd0;
+    wire [7:0] hdmi_base_red = vu_rgb[23:16];
+    wire [7:0] hdmi_base_green = vu_rgb[15:8];
+    wire [7:0] hdmi_base_blue = vu_rgb[7:0];
     // Debug mode owns the complete HDMI picture: white trace text on black.
-    // Without Franky the picture is black when the debugger is off.
+    // MoonSound fork: without Franky, the picture is the VU meter when the
+    // debugger is off.
     wire [7:0] hdmi_red = step_debug_enabled ?
                           {8{sms_debug_terminal_pixel}} : hdmi_base_red;
     wire [7:0] hdmi_green = step_debug_enabled ?
@@ -1101,6 +1110,91 @@ module top
     wire [15:0] hdmi_audio_samples [1:0];
     assign hdmi_audio_samples[0] = hdmi_mix_sample;
     assign hdmi_audio_samples[1] = hdmi_mix_sample_right;
+
+    // ---------------------------------------------------------------------
+    // MoonSound fork: VU meter on HDMI (MoonTANG's vu_screen; vu_meter_nj
+    // does what MoonTANG's vu_meter does with a third of its logic)
+    // ---------------------------------------------------------------------
+    // No framebuffer: vu_screen draws every pixel from hdmi_x/hdmi_y, with
+    // its rgb one pixel clock after them, as the hdmi module expects.
+    // Bars: OPL4 FM L/R and wave L/R (the two halves of the OPL4 mix, after
+    // the F8h attenuation) and what HDMI plays, L/R (the whole mix with the
+    // HDMI-only x2, saturated).
+    //
+    // Clock domains: vu_meter_nj runs on opl4_clk54, where the FM and wave
+    // samples live; the HDMI samples (main_clk) enter it through its input
+    // register, an ordinary timed path (same PLL, in phase). It keeps the
+    // peak of each signal over a video frame and changes its outputs only
+    // once per frame, at the start of the vertical blanking (vu_frame_tog, a
+    // toggle synchronized in vu_meter_nj).
+    // vu_screen (27 MHz pixel clock) reads them during the active lines,
+    // milliseconds after they settled, so they need no synchronizer; that
+    // crossing is in the asynchronous clock groups of top.sdc. The status
+    // bits are quasi-static and go through two pixel-clock registers.
+    //
+    // The hdmi module is reset with sms_reset_n, which follows the MSX
+    // /RESET (active_module_reset_n), and so is the video PLL: the picture
+    // can drop for a moment while the MSX is reset.
+    localparam integer VU_FOOT_N = 38;
+    localparam [8*VU_FOOT_N-1:0] VU_FOOT =
+        "NEW JUICE MOONSOUND FORK X2 2026-10-06";
+
+    reg vu_frame_tog = 1'b0;
+    always_ff @(posedge clk)
+    begin
+        if (hdmi_x == 10'd0 && hdmi_y == 10'd480)
+            vu_frame_tog <= ~vu_frame_tog;
+    end
+
+    wire [29:0] vu_level;
+    wire [29:0] vu_peak;
+    vu_meter_nj #(
+        .NCH(6)
+    ) vu_meter_inst (
+        .clk(opl4_clk54),
+        .frame_tog(vu_frame_tog),
+        .samples({hdmi_mix_louder_sample_right, hdmi_mix_louder_sample,
+                  opl4_vu_wave_r, opl4_vu_wave_l,
+                  opl4_vu_fm_r, opl4_vu_fm_l}),
+        .level(vu_level),
+        .peak(vu_peak)
+    );
+
+    (* syn_preserve = 1, ASYNC_REG = "TRUE" *)
+    reg [1:0] vu_st_rom_meta = 2'd0;
+    reg [1:0] vu_st_rom = 2'd0;
+    (* syn_preserve = 1, ASYNC_REG = "TRUE" *)
+    reg vu_st_msx_meta = 1'b0;
+    reg vu_st_msx = 1'b0;
+    always_ff @(posedge clk)
+    begin
+        // 0 = copying the YRW801, 1 = OK, 2 = error, 3 = not a YRW801
+        vu_st_rom_meta <= opl4_wl_error ? 2'd2 :
+                          !opl4_wl_done ? 2'd0 :
+                          opl4_wl_badimg ? 2'd3 : 2'd1;
+        vu_st_rom <= vu_st_rom_meta;
+        vu_st_msx_meta <= opl4_slot_alive;
+        vu_st_msx <= vu_st_msx_meta;
+    end
+
+    vu_screen #(
+        .TITLE_N(9),
+        .TITLE("NEW JUICE"),
+        .SUB_N(16),
+        .SUB("+ MOONSOUND OPL4"),
+        .FOOT_N(VU_FOOT_N),
+        .FOOT(VU_FOOT)
+    ) vu_screen_inst (
+        .clk(clk),
+        .rst_n(sms_reset_n),
+        .cx(hdmi_x),
+        .cy(hdmi_y),
+        .rgb(vu_rgb),
+        .level(vu_level),
+        .peak(vu_peak),
+        .st_rom(vu_st_rom),
+        .st_msx(vu_st_msx)
+    );
 
     wire [9:0] hdmi_tmds_internal [2:0];
     hdmi #(
@@ -1679,7 +1773,12 @@ module top
         .rom_write_en(opl4_rom_write_en),
         .wl_done(opl4_wl_done),
         .wl_error(opl4_wl_error),
-        .wl_badimg(opl4_wl_badimg)
+        .wl_badimg(opl4_wl_badimg),
+        .vu_fm_l(opl4_vu_fm_l),
+        .vu_fm_r(opl4_vu_fm_r),
+        .vu_wave_l(opl4_vu_wave_l),
+        .vu_wave_r(opl4_vu_wave_r),
+        .slot_alive(opl4_slot_alive)
     );
 
     // MoonSound fork: the adapter (CPU + Z80-paced refresh) shares the

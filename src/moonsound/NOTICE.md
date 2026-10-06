@@ -1,10 +1,11 @@
 # MoonSound (OPL4) for New Juice: sources and licenses
 
 This folder holds the MoonSound (Yamaha YMF278B / OPL4) used by the New Juice
-MoonSound fork. Except for two license headers (noted below) and the New Juice
-glue (`moonsound_nj.sv`, `nj_sdram_arb.v`), every file is a verbatim copy of
-MoonTANG commit `5400f15` (05/10/2026). Per-file headers are authoritative;
-keep them intact.
+MoonSound fork, and the VU meter it shows on HDMI. Except for two license
+headers and `vu_screen.v` (noted below) and the New Juice files
+(`moonsound_nj.sv`, `nj_sdram_arb.v`, `vu_meter_nj.v`), every file is a
+verbatim copy of MoonTANG commit `5400f15` (05/10/2026). Per-file headers are
+authoritative; keep them intact.
 
 | Component | Files | Author / project | License |
 |---|---|---|---|
@@ -18,12 +19,20 @@ keep them intact.
 | SPI flash reader | `flash_rw.v` | derived from `fpga/src/flash.v` of lfantoniosi/WonderTANG, Copyright (c) 2023 lfantoniosi; MoonTANG changes by Albert "Papipapito" with Claude | BSD-2-Clause (original) + GPL-3.0 (changes) |
 | New Juice glue: bus, clocks, flash hand-over, mix | `moonsound_nj.sv` | Albert "Papipapito" with Claude | GPL-3.0 |
 | SDRAM arbiter with its own refresh timer | `nj_sdram_arb.v` | Albert "Papipapito" with Claude | GPL-3.0 |
+| VU meter screen (720x480p, drawn from the HDMI coordinates, no framebuffer) | `vu_screen.v` | Albert "Papipapito" with Claude (MoonTANG) | GPL-3.0 |
+| 8x8 font of that screen | `font8x8.v` | Albert "Papipapito" with Claude: the clean-room font of SlotDoctor, via MoonTANG | GPL-3.0 |
+| VU level meter (does what MoonTANG's `vu_meter.v` does, with less logic) | `vu_meter_nj.v` | Albert "Papipapito" with Claude | GPL-3.0 |
 
 Changes in this fork: license headers added to `flash_rw.v` (the BSD-2
 notice of the WonderTANG `flash.v` it derives from) and `opl4fm.v` (the BSD-3
 notice of the MangOPL4 wrapper it adapts), with the code below them unchanged;
-and `opl3/opl3_pkg.sv` retuned from 27 to 36 MHz (CLK_FREQ, CLK_DIV_COUNT and
-the two timer tick counts; marked in the file).
+`opl3/opl3_pkg.sv` retuned from 27 to 36 MHz (CLK_FREQ, CLK_DIV_COUNT and
+the two timer tick counts; marked in the file); and `vu_screen.v`, whose
+title, subtitle and footer became parameters and whose two text tables
+became block-RAM ROMs (described at the top of the file; with its default
+parameters it still draws MoonTANG's picture, pixel for pixel).
+MoonTANG's `vu_meter.v` itself is not used in the design: it is kept, as the
+reference, in `tools/sim/vu/moontang/`.
 
 Because `afifo.v` (GPL-3.0) is part of the FM core, this folder as a whole is
 GPL-3.0. The rest of New Juice is lfantoniosi's work and keeps his terms; this

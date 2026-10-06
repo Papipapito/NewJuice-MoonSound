@@ -145,6 +145,9 @@
         <File path="src/moonsound/flash_rw.v" type="file.verilog" enable="1"/>
         <File path="src/moonsound/moonsound_nj.sv" type="file.verilog" enable="1"/>
         <File path="src/moonsound/nj_sdram_arb.v" type="file.verilog" enable="1"/>
+        <File path="src/moonsound/vu_meter_nj.v" type="file.verilog" enable="1"/>
+        <File path="src/moonsound/vu_screen.v" type="file.verilog" enable="1"/>
+        <File path="src/moonsound/font8x8.v" type="file.verilog" enable="1"/>
         <File path="src/top.v" type="file.verilog" enable="1"/>
         <File path="src/top.cst" type="file.cst" enable="1"/>
         <File path="src/top.sdc" type="file.sdc" enable="1"/>

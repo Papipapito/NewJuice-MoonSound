@@ -63,6 +63,12 @@ module moonsound_nj #(
     output reg  signed [15:0] mix_l = 16'sd0,
     output reg  signed [15:0] mix_r = 16'sd0,
     output reg  signed [15:0] mix_mono = 16'sd0,
+    // the two halves of that mix, for the VU meter on HDMI (taps only:
+    // the same signals the mix below is made of)
+    output wire signed [15:0] vu_fm_l,
+    output wire signed [15:0] vu_fm_r,
+    output wire signed [15:0] vu_wave_l,
+    output wire signed [15:0] vu_wave_r,
 
     // ---- SPI flash, handed over by New Juice ----
     input  wire        flash_start,      // New Juice ROMs loaded (main_clk)
@@ -84,7 +90,8 @@ module moonsound_nj #(
     // ---- status ----
     output wire        wl_done,          // YRW801 copied (or retries exhausted)
     output wire        wl_error,         // the copy failed
-    output wire        wl_badimg         // copied, but it is not the YRW801
+    output wire        wl_badimg,        // copied, but it is not the YRW801
+    output wire        slot_alive        // the MSX clock runs (clk_54m)
 );
 
     // ------------------------------------------------------------------
@@ -255,6 +262,7 @@ module moonsound_nj #(
             ck_edges <= ck_edges + 7'd1;
     end
     wire bus_ok = ck_alive & bus_reset_n;
+    assign slot_alive = ck_alive;
     // any_rd comes through two 54 MHz register stages, so on its own it would
     // let go of the bus (D0-D7, BUSDIR, DATADIR) 28-45 ns after New Juice's
     // own ports. Gating it with /RD and /IORQ (main_clk domain, the same ones
@@ -276,6 +284,10 @@ module moonsound_nj #(
     wire signed [15:0] fm_r = (opl4_mixfm[2:0] == 3'd7) ? 16'sd0 : o4fm_ar;
     wire signed [15:0] wave_l = opl4pcm_l >>> 1;
     wire signed [15:0] wave_r = opl4pcm_r >>> 1;
+    assign vu_fm_l   = fm_l;
+    assign vu_fm_r   = fm_r;
+    assign vu_wave_l = wave_l;
+    assign vu_wave_r = wave_r;
 
     function automatic signed [15:0] sat16(input signed [17:0] v);
         sat16 = (v >  18'sd32767) ? 16'sh7FFF :
