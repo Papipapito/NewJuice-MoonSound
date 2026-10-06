@@ -1151,7 +1151,7 @@ module top
     // can drop for a moment while the MSX is reset.
     localparam integer VU_FOOT_N = 38;
     localparam [8*VU_FOOT_N-1:0] VU_FOOT =
-        "NEW JUICE MOONSOUND FORK X3 2026-10-06";
+        "NEW JUICE MOONSOUND FORK X4 2026-10-06";
 
     reg vu_frame_tog = 1'b0;
     always_ff @(posedge clk)
