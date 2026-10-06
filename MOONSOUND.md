@@ -114,6 +114,20 @@ of Setup Violated Endpoints" and "Numbers of Hold Violated Endpoints" in the
 timing report (`impl/pnr/new-juice_tr_content.html`): the summary table of
 the IDE can show no TNS while a clock-domain crossing fails.
 
+A register stage on all of New Juice's bus inputs (`24a99df`, build X4: the
+`mp_debouncer` snapshot, the `input_debouncer` outputs, the fast /RD and /WR
+and the synchronized CPU clock, each one 108 MHz clock later) was tried to
+take those paths' first route out, and reverted (`2bbd313`). It did not cut
+the paths, only moved their start to the new registers, which fan out to
+15-25 clients across the chip; in the same six 1.9.12.03 builds the worst
+slacks were +0.057, +0.060, +0.007, -0.328 (12 endpoints), -0.157 (3) and
++0.019 ns (X3: -0.156 (11), +0.027, +0.006, -0.098 (8), +0.004, +0.025),
+and 1.9.11.03 Education +0.239 (X3 +0.605). It also cost one clock at the
+slot: data of reads without /WAIT 9.3 ns later, the IN 7Fh /WAIT 18.5 ns
+later (missed at 5.37 MHz), and an IN C4h status bit changing inside the
+Z80's sample window (board bench FAIL). Signal table, figures and what
+could work instead: [FORK.md](FORK.md#tried-and-reverted-a-register-stage-on-the-bus-inputs-x4).
+
 ## SDRAM interface timing
 
 Measured on the eight builds tried on the board and on the two with the VU
@@ -152,7 +166,8 @@ Results on this branch (WSL Ubuntu-24.04, Icarus 12, sv2v):
 | Memory map (`map`) | 16/16 PASS (also the read-back of FCh-FFh: the register as written) |
 | I2S transmitter (`i2s`) | PASS: every word exact through an I2S receiver, both halves equal, a left-justified receiver does not decode it, DIN/WS 315 ns setup / 333 ns hold around the rising BCLK edge, 48.2 kHz. The previous `audio_drive` fails three of the four checks (8/64 words, 9.26 ns hold) |
 | New Juice's OPLL without sv2v (`opll`) | PASS (+-4085) |
-| Whole board (`board/run_board.sh`) | 68/68 PASS: boot with New Juice's start-up test and ROM copy through the arbiter, YRW801 copy (synthetic 4 KB) and checksum, FM status/register read-back/timer /INT, wave ID and memory through 7Eh/7Fh with /WAIT, wave RAM at SDRAM 0x700000, nothing above 1 MB, 2 MB mapper, Super-MegaRAM, Nextor ROM, LINEAR mode, OPLL writes, PCM and FM to the I2S amplifier at 48.2 kHz decoded as I2S with both halves of every frame equal and every word exactly the mix sample, the mono mix saturating at 7FFFh/8000h, the OPL4 releasing the bus at the same time as New Juice's own ports (10 ns after the design's /RD, both), YRW801 kept across an MSX /RESET, no illegal SDRAM command, no decayed row |
+| Whole board (`board/run_board.sh`) | 76/76 PASS: boot with New Juice's start-up test and ROM copy through the arbiter, YRW801 copy (synthetic 4 KB) and checksum, FM status/register read-back/timer /INT, wave ID and memory through 7Eh/7Fh with /WAIT, wave RAM at SDRAM 0x700000, nothing above 1 MB, 2 MB mapper, Super-MegaRAM, Nextor ROM, LINEAR mode, OPLL writes, PCM and FM to the I2S amplifier at 48.2 kHz decoded as I2S with both halves of every frame equal and every word exactly the mix sample, the mono mix saturating at 7FFFh/8000h, the OPL4 releasing the bus at the same time as New Juice's own ports (10 ns after the design's /RD, both), YRW801 kept across an MSX /RESET, no illegal SDRAM command, no decayed row; section O: bus timing at the slot pins with the Z80's timing at 3.58 / 5.37 / 7.16 MHz (checked at 3.58 MHz, measured at the others, figures under Known limits) |
+| Whole board against another revision (`run_board.sh diff`, REF = a git revision, default `4730f9c`) | 2/2 PASS on `2bbd313` against X3 (`4730f9c`): 1941 bus cycles each, every byte, wait state and bus event (DATADIR, /BUSDIR, data at the slot, /WAIT) at the same time, shift 0.0 ns. Against X4 (`cd044ab`) it reported the IN 7Fh wait states lost at 5.37 MHz and every event one or two 108 MHz clocks later |
 | Whole board, flash without YRW801 (`run_board.sh blank`) | 12/12 PASS: the checksum flags the image and the LED flashes |
 | Whole board with HDMI (`run_board.sh hdmi`, three simulations, about 36 minutes) | 5/5 PASS (32/32 checks): New Juice starts the video PLL after the MSX /RESET; through the verification receiver, 1036800 of 1036800 pixels are the ones sent; the two VU frames are, pixel for pixel, `vu_check.py`'s picture (FM 17/0, wave 16/24 with the wave panned 12 dB down on the left, out 20/24 segments), and the levels and peak marks drawn are the ones an independent model of the meter gives from each bar's own source, in both frames; with the FM muted near the end of the first frame, the model and the meter agree in the second that the FM L bar goes down to 16 and OUT L to 19 with their peak marks held at 17 and 20 (on the screen the two frames are the same picture: each bar's top segment is under its own peak mark); the debugger frame is its terminal, pixel for pixel (10318 white pixels, nothing of the meter); 2880 audio samples equal to the transmitted ones, left and right apart; 720x480p geometry, ACR (N 6272, CTS 29988), channel status (44.1 kHz, 16 bits), AVI (VIC 2), Audio InfoFrame, no protocol error. Negative controls: the FM R bar fed from wave R, and the wave L and wave R bars swapped, each fail on the meter check alone; `vu_check.py` rejects a level one segment off |
 | VU meter (`vu/run_vu.sh`) | 13/13 PASS: `vu_meter_nj` gives MoonTANG's `vu_meter` levels and peak marks in 1400 of 1400 random frames, with the reference's frame toggle one clock late for the fork's extra synchronizer stage (and a HOLD 44 mutant fails); the screen with the fork's texts, through `hdmi.sv`, is pixel for pixel `vu_check.py`'s picture (and a level one segment off is rejected), with YRW801 OK and MSX OK and also with YRW801 `...`, `ERROR`, `NO VALIDA` and MSX `--`. With `VG=` the X3 netlist: its three block-RAM ROMs hold what the simulation holds (512 + 128 + 512 entries, and a flipped bit is caught); with `GL=` a 1.9.12.03 synthesis netlist of the screen alone (`vu/syn/run_syn.sh`) draws the same frame, pixel for pixel (and with no netlist both netlist checks fail) |
@@ -167,14 +182,18 @@ Results on this branch (WSL Ubuntu-24.04, Icarus 12, sv2v):
 - Franky is gone: SMS games and the sound scope no longer work. The mapper is
   2 MB, not 4 MB. The wave RAM is 1 MB (the free SDRAM is 1.84 MB, not 2).
 - New Juice serves the Z80 without /WAIT. In the board bench a mapper read
-  has its data on the slot at most 236 ns after /MREQ, with or without 24
+  has its data settled on the slot pins 226 ns after /MREQ (236 ns counting
+  8 ns of board delay), with or without 24
   MoonSound voices playing (the arbiter keeps wave fetches out of the way of
   a starting CPU read): 200/200 reads right at 3.58 MHz (needed by 459 ns)
   and at 5.37 MHz (needed by 282 ns, 47 ns to spare); at 7.16 MHz (needed by
   199 ns) about half fail, 99/200 without the MoonSound and 97/200 with it:
   New Juice does not reach a 7.16 MHz Z80 without /WAIT by itself.
-- IN 7Fh holds the Z80 with /WAIT. /WAIT reaches the slot about 194 ns after
-  /IORQ: in time at 3.58 MHz, too late for a Z80 at 5.37 MHz or above
+- IN 7Fh holds the Z80 with /WAIT. /WAIT reaches the slot at most 190.0 ns
+  after /IORQ at 3.58 MHz (sampled at 349 ns: 89 ns to spare with the Z80's
+  70 ns setup), 201.9 ns at 5.37 MHz (sampled at 219.4 ns) and 204.1 ns at
+  7.16 MHz (sampled at 159.5 ns): in time at 3.58 MHz, too late for a Z80 at
+  5.37 MHz or above
   (MoonTANG behaves the same on the WonderTANG). A turbo machine could read
   a stale byte from 7Fh; `RD_MIRROR = 1` in `moonsound_nj.sv` would serve
   the two registers that software reads from the bus side instead.
@@ -189,6 +208,11 @@ Results on this branch (WSL Ubuntu-24.04, Icarus 12, sv2v):
   seen on a screen yet.
 - The build with the VU meter (X3) closes timing by 4 to 27 ps with
   1.9.12.03; any rebuild has to be checked.
+- Unchanged New Juice behaviour, seen in the bench at the slot pins: the
+  debugger's /WAIT on a held M1 fetch comes 13.4 / 55.1 / 65.4 ns after
+  /MREQ at 3.58 / 5.37 / 7.16 MHz (126 ns, 1 ns and -46 ns to spare with
+  70 ns of setup); SCC wave RAM reads, 2 of 16 wrong at 7.16 MHz with the
+  slot clock equal to the CPU clock, none at 3.58 and 5.37 MHz.
 - Unchanged New Juice behaviour, seen in the bench: with the MSX off (all
   slot lines at 0) New Juice holds /WAIT and turns the data transceiver
   towards the slot, although it drives nothing.

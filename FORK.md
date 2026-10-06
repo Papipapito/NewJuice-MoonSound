@@ -39,6 +39,11 @@ bitstream, `impl/pnr/new-juice.fs`, is still X1**, without the meter, and
 stays X1 until X3 has been tried on the MSXBOOK; X3 is handed out apart, not
 in git. See [The VU meter on HDMI](#the-vu-meter-on-hdmi).
 
+A register stage on New Juice's bus inputs, meant to give timing margin back
+(X4, 6 Oct 2026), was built and reverted: it did not improve the timing and
+cost one clock at the slot. See
+[Tried and reverted](#tried-and-reverted-a-register-stage-on-the-bus-inputs-x4).
+
 ## Why this repository is private
 
 New Juice has no license, so all its rights stay with its author and a fork
@@ -248,8 +253,9 @@ Education, Place 1 / Route 2:
   the PSG (`jt49`, `regarray` -> `count`). None of them goes through the
   meter, its screen or HDMI; the meter shows up only in the hold lists of
   P1 / R1 and P1 / R2, at +0.208 ns (`vu_st_rom` -> the screen's text ROM,
-  clkin). A register on the output of `mp_debouncer` would give margin
-  back, but that is New Juice's logic and has not been touched.
+  clkin). A register stage on the bus inputs of New Juice was tried (X4)
+  and reverted: it did not give the margin back, see
+  [Tried and reverted: a register stage on the bus inputs](#tried-and-reverted-a-register-stage-on-the-bus-inputs-x4).
 
 So check "Numbers of Setup Violated Endpoints" after every rebuild: any
 change, in the meter or anywhere else, can move the placement into a failing
@@ -261,8 +267,79 @@ build. After any change, read "Numbers of Setup Violated Endpoints" and
 the summary of the IDE can show no TNS while a clock-domain crossing fails.
 
 Gowin does not time the SDRAM pins in any of these builds: New Juice's SDC
-leaves them unconstrained, and so does this branch. The next two sections
-say what that means and what was measured.
+leaves them unconstrained, and so does this branch.
+[The SDRAM interface](#the-sdram-interface) and the section after it say
+what that means and what was measured.
+
+### Tried and reverted: a register stage on the bus inputs (X4)
+
+This was a change to **New Juice's own logic**, not to the MoonSound. It was
+committed as `24a99df` (plus the footer `cd044ab`), built as X4, and
+reverted in `2bbd313`; `src/` is again exactly X3 (`4730f9c`). Nothing of
+it is in any bitstream handed out.
+
+The idea: the paths that limit main_clk start at the bus snapshot of
+`mp_debouncer` (`latched`), so one more register on every bus input of the
+108 MHz domain would take the snapshot's long first route out of them. To
+keep New Juice's behaviour, everything its clients use together in the same
+clock was delayed by exactly one main clock (9.26 ns):
+
+| Signal | Comes from | X4 | Why |
+|---|---|---|---|
+| A0-A15, /MREQ, /IORQ, /CS1, /CS2, /CS12, /RESET, /RFSH, /M1 and the "snapshot valid" pulse | `mp_debouncer` (the multiplexed bus of the WonderTANG) | +1 clock | the snapshot itself; every slot decode uses it |
+| /RD, /WR, /SLTSL, D0-D7 (`rd_n`, `wr_n`, `sltsl_n`, `cd_in`) | `input_debouncer` | +1 clock | combined with the snapshot in the same clock by every client |
+| fast /RD and /WR (`smr_rd_n_fast`, `smr_wr_n_fast`), used by `slot_expander`, `super_megaram`, `linear_rom` and `sdram_command_adapter` | 2-register synchronizer in `top.v` | +1 clock (3 stages) | used in the same clock as the snapshot and the debounced /RD and /WR |
+| CPU clock seen by `sdram_mapper` and `sd_registers` | `psg_cpu_clk_sync` | +1 clock | its edges are compared with the bus state |
+| raw /SLTSL and /RD hint of the SDRAM arbiter (`cpu_sltsl_n`, `cpu_rd_n`) | pins, own synchronizer | not delayed | only an early warning that a CPU read is coming; with X4 it arrives one clock earlier relative to New Juice's request, still inside its 40-clock window, so it keeps its meaning |
+| slot clock of IKASCC | pin | not delayed | it is a clock, not a bus signal |
+| MoonSound clock-alive detector | pin | not delayed | it only looks for edges |
+
+Everything the cartridge drives (D0-D7, /BUSDIR, DATADIR, /WAIT, /INT) is
+derived from the delayed signals, so it all moved by the same clock; the
+benches found no illegal drive of the bus and no edge detector out of step.
+
+Why it was reverted:
+
+- **Timing did not improve.** Worst setup slack in main_clk (violated setup
+  endpoints), X3 -> X4: Place 0 / Route 0 -0.156 (11) -> +0.057 (0); 0 / 1
+  +0.027 -> +0.060; 0 / 2 +0.006 -> +0.007; 1 / 0 -0.098 (8) -> **-0.328
+  (12)**; 1 / 1 +0.004 -> **-0.157 (3)**; 1 / 2 +0.025 -> +0.019; 1.9.11.03
+  Education 1 / 2 +0.605 -> +0.239. Two of six 1.9.12.03 builds still fail
+  (1 / 0 and 1 / 1, where X3 failed 0 / 0 and 1 / 0), the mean goes from -0.032 to -0.057 ns, and Fmax in
+  the worst one is 104.3 MHz. Hold: 0 in all.
+- **The stage does not cut the path, it only moves its start.** In X4 the
+  worst paths start at the new registers (`latched_out_*`, 24 of the 25
+  worst in P1 / R0 and P1 / R1) and go to the same places (`flash_roms`
+  state and clock enables, `cpu_cycle_seen`, `super_megaram` banks,
+  `linear_rom`) through the same 6 to 8 LUT levels, with the same sharing of
+  decode LUTs between modules. Each snapshot bit feeds 15 to 25 clients
+  spread over the chip, so the placer cannot put the register next to all of
+  them: the first route grew from 0.8-1.4 ns to 1.5-2.1 ns.
+- **The board bench failed** (one check): an IN C4h (OPL4 status) read
+  changed its LD bit inside the Z80's sample window. The MoonSound sees the
+  delayed /IORQ and /RD, so its live status bit moved into that window. X3
+  passes.
+- **One clock less of margin on the slot**, measured in the board bench at
+  3.58 / 5.37 / 7.16 MHz (X3 -> X4): reads without /WAIT have their data on
+  the slot 9.3 ns later (mapper 226.1 -> 235.4 ns after /MREQ; margin with
+  tS(D) = 30 ns 232.6 -> 223.4 ns at 3.58 MHz and 56.2 -> 46.9 ns at
+  5.37 MHz; the Super-MegaRAM in RAM mode had 11 ns left at 5.37 MHz). The
+  /WAIT of IN 7Fh fell 18.5 ns later (two clocks, because the MoonSound
+  side quantizes it to 54 MHz): 190.0 -> 208.5 ns after /IORQ at 3.58 MHz
+  (sampled at 349 ns, still in time); at 5.37 MHz it went from 201.9 ns,
+  before the Z80's sampling edge at 219.4 ns (though inside its 70 ns
+  setup), to 222.8 ns, after that edge, and the bench's IN 7Fh went through
+  without waiting. The bus was released 9 ns later after
+  a read (32.5-87.7 -> 41.8-97.0 ns after /RD rises), which at 7.16 MHz
+  overlaps the Z80's next write by a few ns.
+
+What could work instead (not done): register after the slot decode, not
+before it: one copy of the decoded clock enables per client (`flash_roms`,
+`linear_rom`, `super_megaram`, `sdram_mapper`), kept apart with
+`syn_preserve` / `syn_keep` so synthesis does not share their LUTs. It would
+also cost about one clock at the slot, so the IN 7Fh /WAIT should then be
+decoded straight from the bus in the main clock domain rather than through
+the MoonSound's 54 MHz registers.
 
 ## The VU meter on HDMI
 
@@ -531,13 +608,16 @@ The details are in [MOONSOUND.md](MOONSOUND.md). In short:
   [Board results](#board-results).
 - Gowin does not time the SDRAM pins: see
   [The SDRAM interface](#the-sdram-interface).
-- IN 7Fh holds the Z80 with /WAIT, which reaches the slot about 194 ns after
-  /IORQ: in time at 3.58 MHz, too late at 5.37 MHz or above, where a stale
+- IN 7Fh holds the Z80 with /WAIT, which reaches the slot at most 190 ns
+  after /IORQ at 3.58 MHz (202-204 ns at 5.37 / 7.16 MHz): in time at 3.58 MHz, too late at 5.37 MHz or above, where a stale
   byte can be read (MoonTANG behaves the same). Register writes, which is
   what playing music mostly does, are not affected.
 - New Juice serves the Z80 without /WAIT. In the board bench memory reads are
   right at 3.58 and 5.37 MHz with or without the MoonSound; at 7.16 MHz about
   half fail with or without it, so that limit is New Juice's own.
+  At 5.37 MHz the data is settled on the slot pins 56 ns before the Z80
+  needs it (30 ns setup counted); every register added on New Juice's bus
+  path takes 9.3 ns of that (measured with X4).
 - The OPL4 joins the mix at the level of the OPLL; the balance has to be set
   by ear on the board.
 - HDMI (picture and sound) drops with every MSX /RESET, and there is none
