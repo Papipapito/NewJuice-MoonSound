@@ -8,6 +8,10 @@
 #   hdmi            the video PLL runs: VU meter and debugger picture and HDMI audio
 #                   through a verification receiver (hdmi_nj.vh), and its two negative
 #                   controls (three cores, about 75 ms of board time each)
+#   diff            the main bench on this tree and on REF (a git revision, default
+#                   4730f9c = X3, before the bus input stage), side by side (two
+#                   cores), then cyc_diff.py on their per-cycle bus logs: the same
+#                   cycles and bytes, and how much later each bus event comes
 set -e
 cd "$(dirname "$0")"
 R=$(cd ../../.. && pwd)
@@ -19,18 +23,22 @@ MODE=${1:-main}
 mkdir -p build
 # nothing from an earlier run is reused: a failed step stops the bench
 rm -f build/nj_sv2v.v build/nj_sv2v_neg.v build/nj_pins.v build/sd_reader.sv
+rm -f build/nj_sv2v_ref.v build/nj_pins_ref.v build/*.cyc
 
 # ---- 1. the design as listed in new-juice.gprj, converted to plain Verilog ----
-FILES=$(grep -o 'path="[^"]*"' "$R/new-juice.gprj" | sed 's/path="//;s/"//' | grep -E '\.(v|sv)$')
-# sd_reader.sv has an unnamed instance (accepted by Gowin, not by sv2v)
-sed 's/^sd_crc_16(/sd_crc_16 u_sd_crc_16(/' "$R/src/sd_reader.sv" > build/sd_reader.sv
-LIST=""
-for f in $FILES; do
-    if [ "$f" = "src/sd_reader.sv" ]; then LIST="$LIST $PWD/build/sd_reader.sv"; else LIST="$LIST $R/$f"; fi
-done
-# SIMULATION: the jotego cores (jt2413, jt51, jt49) zero their clock dividers
-# in simulation; without it the OPLL never leaves X in Icarus.
-(cd "$R" && "$SV2V" -DMODEL_TECH -DSIMULATION -I src $LIST -w "$OLDPWD/build/nj_sv2v.v")
+convert() {   # convert <tree> <output>
+    local T=$1 OUT=$2 FILES LIST="" f
+    FILES=$(grep -o 'path="[^"]*"' "$T/new-juice.gprj" | sed 's/path="//;s/"//' | grep -E '\.(v|sv)$')
+    # sd_reader.sv has an unnamed instance (accepted by Gowin, not by sv2v)
+    sed 's/^sd_crc_16(/sd_crc_16 u_sd_crc_16(/' "$T/src/sd_reader.sv" > build/sd_reader.sv
+    for f in $FILES; do
+        if [ "$f" = "src/sd_reader.sv" ]; then LIST="$LIST $PWD/build/sd_reader.sv"; else LIST="$LIST $T/$f"; fi
+    done
+    # SIMULATION: the jotego cores (jt2413, jt51, jt49) zero their clock dividers
+    # in simulation; without it the OPLL never leaves X in Icarus.
+    (cd "$T" && "$SV2V" -DMODEL_TECH -DSIMULATION -I src $LIST -w "$OLDPWD/$OUT")
+}
+convert "$R" build/nj_sv2v.v
 
 # ---- 2. simulation shortcuts (the RTL is not touched; every pattern must match once) ----
 patch() {   # patch <old> <new> [file]
@@ -44,10 +52,13 @@ t = open(p, encoding='utf-8').read()
 open(p, 'w', encoding='utf-8').write(t.replace(sys.argv[1], sys.argv[2], 1))
 EOF
 }
-patch "localparam [22:0] AUTO_S1_DELAY_CYCLES = 23'd6749999;" "localparam [22:0] AUTO_S1_DELAY_CYCLES = 23'd2000;"
-patch "localparam [15:0] LAST_TEST_ADDR = 16'hfffe;"          "localparam [15:0] LAST_TEST_ADDR = 16'h00fe;"
-patch "localparam [17:0] ROM_BYTE_COUNT = 18'h28000;"         "localparam [17:0] ROM_BYTE_COUNT = 18'h00800;"
-echo "sv2v OK: $(grep -c '^module ' build/nj_sv2v.v) modules"
+shortcuts() {   # shortcuts <converted design>
+    patch "localparam [22:0] AUTO_S1_DELAY_CYCLES = 23'd6749999;" "localparam [22:0] AUTO_S1_DELAY_CYCLES = 23'd2000;" "$1"
+    patch "localparam [15:0] LAST_TEST_ADDR = 16'hfffe;"          "localparam [15:0] LAST_TEST_ADDR = 16'h00fe;" "$1"
+    patch "localparam [17:0] ROM_BYTE_COUNT = 18'h28000;"         "localparam [17:0] ROM_BYTE_COUNT = 18'h00800;" "$1"
+    echo "sv2v OK: $(grep -c '^module ' "$1") modules in $1"
+}
+shortcuts build/nj_sv2v.v
 
 # ---- 3. pin wrapper from top.cst ----
 python3 gen_pins_nj.py "$R/src/top.v" "$R/src/top.cst" build/nj_pins.v
@@ -60,14 +71,14 @@ comp() {   # comp <name> [iverilog options]   (NETLIST, EXTRA: from the environm
     rm -f build/$name.vvp build/$name.log
     iverilog -g2012 -I . -s tb_nj_board "$@" -o build/$name.vvp \
         tb_nj_board.v wt20x_board.v ../common/sdram_model.v ../common/spi_flash_model.v \
-        ${EXTRA:-} build/nj_pins.v ${NETLIST:-build/nj_sv2v.v} "$GW" > build/$name.comp 2>&1 || rc=$?
+        ${EXTRA:-} ${PINS:-build/nj_pins.v} ${NETLIST:-build/nj_sv2v.v} "$GW" > build/$name.comp 2>&1 || rc=$?
     grep -v 'Pruning\|expects 1 bits\|timescale\|Static variable' build/$name.comp || true
     if [ $rc != 0 ] || [ ! -s build/$name.vvp ]; then
         rm -f build/$name.vvp
         echo "ERROR: iverilog failed for $name (build/$name.comp)"; exit 1
     fi
 }
-run() { stdbuf -oL vvp -n build/$1.vvp > build/$1.log 2>&1 || true; }
+run() { stdbuf -oL vvp -n build/$1.vvp +cyclog=build/$1.cyc > build/$1.log 2>&1 || true; }
 show() { echo "################ $1 ################"; grep -a -v "^VCD\|WARNING: .*prim_sim" build/$1.log | tail -150; }
 verdict() {   # verdict <name>...: exit status 0 only if every log says PASS
     local n=0 npass=0 failed=""
@@ -125,5 +136,25 @@ case "$MODE" in
         echo "run_board: $npass/$n PASS${failed:+ (failed:$failed)}"
         echo "  (hdmi bench; vu_check of its frames; vu_check of a wrong level must FAIL; both negative controls must FAIL, on the meter check only)"
         [ "$npass" = "$n" ] ;;
+    diff)
+        # the reference design: REF's sources (its submodules, which git
+        # archive leaves out, are taken from this tree: they are not changed)
+        REF=${REF:-4730f9c}
+        rm -rf build/ref && mkdir -p build/ref
+        git -C "$R" -c safe.directory='*' archive "$REF" src new-juice.gprj | tar -x -C build/ref
+        for s in src/jt49 src/jt51 src/jtopl; do rm -rf build/ref/$s; cp -r "$R/$s" build/ref/$s; rm -f build/ref/$s/.git; done
+        convert "$PWD/build/ref" build/nj_sv2v_ref.v
+        shortcuts build/nj_sv2v_ref.v
+        python3 gen_pins_nj.py build/ref/src/top.v build/ref/src/top.cst build/nj_pins_ref.v
+        echo "reference: $REF ($(git -C "$R" -c safe.directory='*' log --oneline -1 "$REF"))"
+        comp main
+        PINS=build/nj_pins_ref.v NETLIST=build/nj_sv2v_ref.v comp ref
+        run main & run ref & wait
+        show main; show ref
+        echo "################ bus timing at the slot, $REF (ref) and this tree (main) ################"
+        for name in ref main; do echo "-- $name"; grep -a "\[bus\]" build/$name.log; done
+        echo "################ cyc_diff.py: ref -> main ################"
+        rc=0; python3 cyc_diff.py build/ref.cyc build/main.cyc || rc=$?
+        verdict main ref && [ $rc = 0 ] ;;
     *)     echo "unknown mode: $MODE"; exit 2 ;;
 esac

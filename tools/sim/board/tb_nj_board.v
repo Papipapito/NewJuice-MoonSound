@@ -18,6 +18,15 @@
 // 2 KB of ROM instead of 160 KB, the YRW801 is 4 KB, and the video PLL is held
 // in reset (HDMI is not exercised here), except in the HDMI mode (WITH_HDMI,
 // hdmi_nj.vh), which boots, plays the OPL4 and checks the HDMI output.
+//
+// Bus timing at the slot pins: every read the bench makes is logged with the
+// moments, counted from its /MREQ or /IORQ, at which the transceiver turns
+// towards the slot (DATADIR), /BUSDIR falls, the data at the slot settles and
+// /WAIT falls (`+cyclog=<file>`, one line per bus cycle). Section L measures
+// them for mapper reads at 3.58 / 5.37 / 7.16 MHz, section O for I/O reads
+// (IN FEh, IN C4h, IN 7Fh), SCC reads and the debugger's /WAIT on an M1
+// fetch, at the same three speeds. `run_board.sh diff` runs the bench on two
+// versions of the design and compares those logs (tools/sim/board/cyc_diff.py).
 // ============================================================================
 `timescale 1ns/1ps
 
@@ -161,6 +170,37 @@ module tb_nj_board;
     end
 
     // ------------------------------------------------------------------
+    //  Bus timing at the slot pins, and the per-cycle log
+    // ------------------------------------------------------------------
+    // last moment the transceiver turned towards the slot, /BUSDIR fell, the
+    // slot data changed and /WAIT fell (board outputs, after the board model)
+    realtime t_dir_on = 0, t_bd_on = 0, t_sd_chg = 0, t_wait_on = 0;
+    always @(posedge cart_drives_d) t_dir_on = $realtime;
+    always @(negedge s_busdir_n)    t_bd_on = $realtime;
+    always @(s_d)                   t_sd_chg = $realtime;
+    always @(negedge s_wait_n)      t_wait_on = $realtime;
+    // time of an event in this cycle counted from the strobe t0, -1 if none
+    function real rel(input real t, input real t0); rel = (t >= t0) ? t - t0 : -1.0; endfunction
+    // the data at the slot is settled from the later of its last change and
+    // the moment the board starts driving it
+    function real rel_data(input real t0);
+        rel_data = cart_drives_d ? (((t_sd_chg > t_dir_on) ? t_sd_chg : t_dir_on) - t0) : -1.0;
+    endfunction
+    integer cyc_f = 0, cyc_n = 0;
+    reg [1023:0] cyc_name;
+    initial if ($value$plusargs("cyclog=%s", cyc_name)) cyc_f = $fopen(cyc_name, "w");
+    // kind address data wait-states DATADIR BUSDIR data /WAIT, times in ns
+    task cyc_log(input [8*8-1:0] kind, input [15:0] adr, input [7:0] v, input integer tw,
+                 input real dr, input real bd, input real dt, input real wt);
+        begin
+            cyc_n = cyc_n + 1;
+            if (cyc_f != 0)
+                $fdisplay(cyc_f, "%0d %0s %04x %02x tw=%0d TH=%0.1f dir=%0.3f bd=%0.3f dat=%0.3f wt=%0.3f",
+                          cyc_n, kind, adr, v, tw, TH, dr, bd, dt, wt);
+        end
+    endtask
+
+    // ------------------------------------------------------------------
     //  Z80 bus cycles (Z80A timing)
     // ------------------------------------------------------------------
     integer  last_tw;
@@ -219,6 +259,7 @@ module tb_nj_board;
             @(negedge clk358); #100 d_out = v; d_oe = 1'b1;
             @(posedge clk358); #75 iorq_n = 1'b0; #5 wr_n = 1'b0; t_iorq = $realtime;
             io_wait_states;
+            cyc_log("IO_WR", p, v, last_tw, -1.0, -1.0, -1.0, rel(t_wait_on, t_iorq));
             @(posedge clk358);
             @(negedge clk358); #80 wr_n = 1'b1; iorq_n = 1'b1;
             #60 d_oe = 1'b0;
@@ -241,6 +282,8 @@ module tb_nj_board;
                 setup_viol = setup_viol + 1;
                 $display("  [FAIL %0t] data unstable at the Z80 sample point: %02x -> %02x", $time, rd_early, rdv);
             end
+            cyc_log("IO_RD", p, rdv, last_tw, rel(t_dir_on, t_iorq), rel(t_bd_on, t_iorq),
+                    rel_data(t_iorq), rel(t_wait_on, t_iorq));
             #85 iorq_n = 1'b1; rd_n = 1'b1; t_rd_up = $realtime;
         end
     endtask
@@ -265,6 +308,9 @@ module tb_nj_board;
     endtask
 
     // memory cycles to this cartridge's slot (/SLTSL follows /MREQ)
+    // t_pin_max / t_dir_max: the same read seen at the slot pins (data
+    // settled, transceiver turned), only for reads that return the right byte
+    real     t_pin_max = 0, t_dir_max = 0, t_pin, t_dir;
     real     t_valid, t_valid_max;
     integer  dbg_rd = 0;
     reg [7:0] exp_rd;
@@ -281,9 +327,10 @@ module tb_nj_board;
         begin
             m1_fetch(16'h0100, 8'h77);                 // LD (HL),A from the system ROM
             @(posedge clk358); #100 a = adr;
-            @(negedge clk358); #70 mreq_n = 1'b0; #20 sltsl_n = 1'b0; d_out = v; d_oe = 1'b1;
+            @(negedge clk358); #70 mreq_n = 1'b0; t_mreq = $realtime; #20 sltsl_n = 1'b0; d_out = v; d_oe = 1'b1;
             @(negedge clk358); #70 wr_n = 1'b0;        // T2 falling
             @(posedge clk358);
+            cyc_log("MEM_WR", adr, v, 0, -1.0, -1.0, -1.0, rel(t_wait_on, t_mreq));
             @(negedge clk358); #70 wr_n = 1'b1; mreq_n = 1'b1; #20 sltsl_n = 1'b1;
             #40 d_oe = 1'b0;
         end
@@ -311,7 +358,61 @@ module tb_nj_board;
                 if (mem_bad <= 3) $display("         [info %0t] lectura de %04x: %02x (antes %02x), esperado %02x", $time, adr, rdv, rd_early, expect_v);
             end
             if (t_valid < 1.0e8 && t_valid > t_valid_max) t_valid_max = t_valid;
+            t_pin = rel_data(t_mreq); t_dir = rel(t_dir_on, t_mreq);
+            if (rdv === expect_v && rd_early === rdv) begin
+                if (t_pin > t_pin_max) t_pin_max = t_pin;
+                if (t_dir > t_dir_max) t_dir_max = t_dir;
+            end
+            cyc_log("MEM_RD", adr, rdv, 0, t_dir, rel(t_bd_on, t_mreq), t_pin, rel(t_wait_on, t_mreq));
             #70 mreq_n = 1'b1; rd_n = 1'b1; #20 sltsl_n = 1'b1;
+        end
+    endtask
+
+    // I/O read with the Z80's timing scaled to the clock (TH): /IORQ and /RD
+    // tDL after T2 rises, /WAIT sampled when TW falls, data when T3 falls.
+    // It only measures: a late /WAIT at 5.37 or 7.16 MHz is not a failure
+    // here (it is reported), so it does not count in setup_viol.
+    real io_dir, io_bd, io_dat, io_wt;
+    integer io_tw;
+    task io_rd_t(input [15:0] p);
+        begin
+            m1_fetch(16'h4002, 8'hDB);
+            @(posedge clk358); #(tdl(TH)) a = p;                       // T1
+            @(posedge clk358); #(tdl(TH)) iorq_n = 1'b0; rd_n = 1'b0;  // T2
+            t_iorq = $realtime;
+            @(posedge clk358);                                        // TW
+            @(negedge clk358);
+            io_tw = 1;
+            while (s_wait_n === 1'b0) begin @(posedge clk358); @(negedge clk358); io_tw = io_tw + 1; end
+            @(posedge clk358);                                        // T3
+            @(negedge clk358);
+            rdv = s_d; rd_driven = cart_drives_d;
+            io_dir = rel(t_dir_on, t_iorq); io_bd = rel(t_bd_on, t_iorq);
+            io_dat = rel_data(t_iorq); io_wt = rel(t_wait_on, t_iorq);
+            cyc_log("IO_RDT", p, rdv, io_tw, io_dir, io_bd, io_dat, io_wt);
+            #(tdl(TH)) iorq_n = 1'b1; rd_n = 1'b1;
+            #200;
+        end
+    endtask
+    // M1 fetch with the Z80's timing scaled to the clock; returns when /WAIT
+    // fell, counted from /MREQ (-1 if it did not by the T2 falling edge,
+    // where the Z80 samples it). The opcode comes from the system ROM.
+    real m1_wt;
+    task m1_t(input [15:0] pc, input [7:0] opcode);
+        realtime tm;
+        begin
+            @(posedge clk358); #(tdl(TH)) a = pc; m1_n = 1'b0;         // T1
+            @(negedge clk358); #(tdl(TH)) mreq_n = 1'b0; rd_n = 1'b0; tm = $realtime;
+            @(posedge clk358); #(TH / 2.0) d_out = opcode; d_oe = 1'b1; // T2
+            @(negedge clk358);                                         // /WAIT sampled
+            m1_wt = rel(t_wait_on, tm);
+            cyc_log("M1", pc, opcode, (s_wait_n === 1'b0), -1.0, -1.0, -1.0, m1_wt);
+            @(posedge clk358); #(tdl(TH)) mreq_n = 1'b1; rd_n = 1'b1; m1_n = 1'b1;
+            #10 d_oe = 1'b0; a = {8'h12, 8'h7F}; rfsh_n = 1'b0;
+            @(negedge clk358); #(tdl(TH)) mreq_n = 1'b0;
+            @(posedge clk358);
+            @(negedge clk358); #(tdl(TH)) mreq_n = 1'b1;
+            @(posedge clk358); #(tdl(TH)) rfsh_n = 1'b1;
         end
     endtask
 
@@ -763,11 +864,14 @@ module tb_nj_board;
                 TH = (speed == 0) ? 139.6825 : (speed == 1) ? 93.1217 : 69.8413;
                 sname = (speed == 0) ? "3,58 MHz" : (speed == 1) ? "5,37 MHz" : "7,16 MHz";
                 #20_000;
-                t_valid_max = 0; mem_bad = 0; n_wops = 0; dbg_rd = 2;
+                t_valid_max = 0; mem_bad = 0; n_wops = 0; dbg_rd = 2; t_pin_max = 0; t_dir_max = 0;
                 for (nrd = 0; nrd < 200; nrd = nrd + 1) mem_rd(nrd[0] ? 16'h8124 : 16'h8123, nrd[0] ? 8'hA5 : 8'h5A);
                 $display("         %0s, Z80 a %0s: %0d de 200 lecturas mal; dato en el slot como muy tarde %0.0f ns tras /MREQ; el Z80 lo necesita a %0.0f ns (muestrea a %0.0f, 30 ns de preparacion; margen %0.0f ns); %0d operaciones de ondas durante la medida",
                          pcm_on ? "PCM 24 voces" : "sin PCM     ", sname, mem_bad, t_valid_max, 4.0 * TH - tdl(TH) - 30.0,
                          4.0 * TH - tdl(TH), 4.0 * TH - tdl(TH) - 30.0 - t_valid_max, n_wops);
+                $display("         [bus] %0s %0s lecturas del mapper (las correctas): DATADIR a +%0.1f ns, dato asentado en los pines del slot a +%0.1f ns tras /MREQ; el Z80 lo muestrea a +%0.1f (margen %0.1f ns con tS(D) = 30 ns)",
+                         pcm_on ? "PCM" : "---", sname, t_dir_max, t_pin_max, 4.0 * TH - tdl(TH),
+                         4.0 * TH - tdl(TH) - 30.0 - t_pin_max);
                 if (speed == 0) ok(mem_bad == 0, pcm_on ? "a 3,58 MHz con el PCM sonando todas las lecturas del mapper llegan a tiempo" :
                                                           "a 3,58 MHz sin PCM todas las lecturas del mapper llegan a tiempo");
             end
@@ -793,6 +897,93 @@ module tb_nj_board;
         wv_w(8'h03, 8'h00); wv_w(8'h04, 8'h01); wv_w(8'h05, 8'h20);
         wv_r(8'h06); ok(rdv === 8'h81, "YRW801[000120] sigue en la SDRAM tras el reset");
         wv_w(8'h02, 8'h00);
+
+        // ==============================================================
+        $display("== O. tiempos del bus en los pines del slot a 3,58 / 5,37 / 7,16 MHz ==");
+        // after the /RESET of section M: Super-MegaRAM back in DDX_SCC mode
+        mem_wr(16'hFFFF, 8'h20);                    // page 2 -> subslot 2
+        mem_wr(16'h9000, 8'h3F);                    // bank 2 = 3Fh: SCC at 9800h
+        io_wr(16'h00FE, 8'h05);
+        io_wr(16'h007E, 8'h02);                     // wave register 02h (ID 20h)
+        for (speed = 0; speed < 3; speed = speed + 1) begin
+            TH = (speed == 0) ? 139.6825 : (speed == 1) ? 93.1217 : 69.8413;
+            sname = (speed == 0) ? "3,58 MHz" : (speed == 1) ? "5,37 MHz" : "7,16 MHz";
+            #20_000;
+            // IN FEh (mapper register, New Juice): DATADIR, /BUSDIR and data
+            begin : o_fe
+                real mdr, mbd, mdt; integer bad;
+                mdr = 0; mbd = 0; mdt = 0; bad = 0;
+                for (i = 0; i < 20; i = i + 1) begin
+                    io_rd_t(16'h00FE);
+                    if (rdv !== 8'h05 || io_dir < 0 || io_bd < 0) bad = bad + 1;
+                    if (io_dir > mdr) mdr = io_dir; if (io_bd > mbd) mbd = io_bd; if (io_dat > mdt) mdt = io_dat;
+                end
+                $display("         [bus] %0s IN FEh (mapper) x20: %0d mal; DATADIR +%0.1f, /BUSDIR +%0.1f, dato +%0.1f ns tras /IORQ; el Z80 muestrea a +%0.1f (margen del dato %0.1f ns)",
+                         sname, bad, mdr, mbd, mdt, 5.0 * TH - tdl(TH), 5.0 * TH - tdl(TH) - 30.0 - mdt);
+                if (speed == 0) ok(bad == 0, "IN FEh a 3,58 MHz con temporizacion de Z80: dato, DATADIR y /BUSDIR");
+            end
+            // IN C4h (MoonSound FM status)
+            begin : o_c4
+                real mdr, mbd, mdt; integer bad;
+                mdr = 0; mbd = 0; mdt = 0; bad = 0;
+                for (i = 0; i < 20; i = i + 1) begin
+                    io_rd_t(16'h00C4);
+                    if (!rd_driven || io_bd < 0) bad = bad + 1;
+                    if (io_dir > mdr) mdr = io_dir; if (io_bd > mbd) mbd = io_bd; if (io_dat > mdt) mdt = io_dat;
+                end
+                $display("         [bus] %0s IN C4h (OPL4 FM) x20: %0d mal; DATADIR +%0.1f, /BUSDIR +%0.1f, dato +%0.1f ns tras /IORQ; el Z80 muestrea a +%0.1f (margen del dato %0.1f ns)",
+                         sname, bad, mdr, mbd, mdt, 5.0 * TH - tdl(TH), 5.0 * TH - tdl(TH) - 30.0 - mdt);
+                if (speed == 0) ok(bad == 0, "IN C4h a 3,58 MHz con temporizacion de Z80: la placa contesta con /BUSDIR");
+            end
+            // IN 7Fh (wave register 02h, held with /WAIT)
+            begin : o_7f
+                real mwt; integer bad, late;
+                mwt = 0; bad = 0; late = 0;
+                for (i = 0; i < 10; i = i + 1) begin
+                    io_rd_t(16'h007F);
+                    if (io_wt < 0) bad = bad + 1;
+                    else if (io_wt > 3.0 * TH - tdl(TH) - 70.0) late = late + 1;
+                    if (io_wt > mwt) mwt = io_wt;
+                end
+                $display("         [bus] %0s IN 7Fh (OPL4 wave) x10: /WAIT a +%0.1f ns tras /IORQ como muy tarde; el Z80 lo muestrea a +%0.1f (margen %0.1f ns con tS(WAIT) = 70 ns); %0d tarde, %0d sin /WAIT",
+                         sname, mwt, 3.0 * TH - tdl(TH), 3.0 * TH - tdl(TH) - 70.0 - mwt, late, bad);
+                if (speed == 0) ok(bad == 0 && late == 0, "IN 7Fh a 3,58 MHz: /WAIT a tiempo");
+            end
+            // SCC wave RAM (IKASCC, clocked by the slot clock), no /WAIT
+            begin : o_scc
+                integer bad0;
+                bad0 = mem_bad; t_pin_max = 0; t_dir_max = 0;
+                // written at 3.58 MHz (mem_wr has Z80A delays), read at speed
+                TH = 139.6825; #2_000;
+                for (i = 0; i < 16; i = i + 1) mem_wr(16'h9800 + i, 8'h30 + i + speed * 16);
+                TH = (speed == 0) ? 139.6825 : (speed == 1) ? 93.1217 : 69.8413; #2_000;
+                for (i = 0; i < 16; i = i + 1) mem_rd(16'h9800 + i, 8'h30 + i + speed * 16);
+                $display("         [bus] %0s SCC (9800h) 16 escrituras + 16 lecturas: %0d mal; DATADIR +%0.1f, dato +%0.1f ns tras /MREQ; el Z80 muestrea a +%0.1f (margen %0.1f ns)",
+                         sname, mem_bad - bad0, t_dir_max, t_pin_max, 4.0 * TH - tdl(TH), 4.0 * TH - tdl(TH) - 30.0 - t_pin_max);
+                if (speed == 0) ok(mem_bad == bad0, "SCC a 3,58 MHz: se relee lo escrito, sin /WAIT");
+            end
+            // the debugger's /WAIT on an M1 fetch (OUT 8Fh,57h on; the first
+            // fetch is skipped, the second held; OUT 8Fh,57h off again)
+            begin : o_dbg
+                real w1, w2;
+                // OUT at 3.58 MHz (io_wr has Z80A delays), the M1 fetches at speed
+                TH = 139.6825; #2_000;
+                io_wr(16'h008F, 8'h57);
+                TH = (speed == 0) ? 139.6825 : (speed == 1) ? 93.1217 : 69.8413; #2_000;
+                m1_t(16'h0200, 8'h00); w1 = m1_wt;
+                m1_t(16'h0201, 8'h00); w2 = m1_wt;
+                $display("         [bus] %0s depurador: M1 saltado /WAIT %0.1f, M1 retenido /WAIT a +%0.1f ns tras /MREQ; el Z80 lo muestrea a +%0.1f (margen %0.1f ns con tS(WAIT) = 70 ns)",
+                         sname, w1, w2, 2.0 * TH - tdl(TH), 2.0 * TH - tdl(TH) - 70.0 - w2);
+                if (speed == 0) ok(w1 < 0 && w2 > 0 && fpga.u_top.step_debug_enabled === 1'b1,
+                                   "depurador: el segundo M1 queda retenido con /WAIT");
+                TH = 139.6825; #2_000;
+                io_wr(16'h008F, 8'h57);
+                #2_000;
+                TH = (speed == 0) ? 139.6825 : (speed == 1) ? 93.1217 : 69.8413;
+                ok(fpga.u_top.step_debug_enabled === 1'b0 && s_wait_n !== 1'b0, "  y OUT 8Fh,57h lo apaga y suelta /WAIT");
+            end
+        end
+        TH = 139.6825;
 
         // ==============================================================
         $display("== N. salud general ==");
