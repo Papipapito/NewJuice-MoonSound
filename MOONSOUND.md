@@ -41,6 +41,14 @@ licenses are in [FORK.md](FORK.md).
   The amplifier now gets the whole mix saturated, which is the level the
   old framing produced (New Juice's sources were balanced by ear at it);
   HDMI keeps its own x2.
+- HDMI picture: when the debugger is off, a VU meter (`vu_screen.v` and
+  `font8x8.v` from MoonTANG, `vu_meter_nj.v`) instead of the black picture
+  left by the Franky removal; the debugger keeps priority. The meter takes
+  the FM and wave halves of the OPL4 mix (54 MHz, taps of `moonsound_nj`)
+  and the two samples HDMI plays (main_clk, through its input register), and
+  changes its outputs once per frame in the vertical blanking; the screen
+  draws from the HDMI coordinates at 27 MHz, with no framebuffer. See
+  [FORK.md](FORK.md#the-vu-meter-on-hdmi).
 
 ## Resources and timing
 
@@ -70,6 +78,23 @@ project uses `Place_Option = 1`, `Route_Option = 2`
 versions. With 1.9.12 P1/R2 the other clocks have, as Fmax against the
 constraint: opl4_clk54 95.2 / 54 MHz, PCM engine (opl4_clk_eng) 41.5 / 36 MHz,
 clkin (OPM, OPLL, HDMI pixels) 53.9 / 27 MHz, cpu_clk 67.4 / 3.58 MHz.
+
+With the VU meter (build X2, commit `437b716`), 1.9.12.03:
+
+| Place / Route | Worst setup slack | Violated setup / hold endpoints |
+|---|---|---|
+| 0 / 1 | -0.343 ns | **15** / 0 |
+| 0 / 2 | +0.020 ns | 0 / 0 |
+| 1 / 0 | +0.017 ns | 0 / 0 |
+| 1 / 1 | +0.212 ns | 0 / 0 |
+| **1 / 2**, project setting (X2) | **+0.088 ns** | 0 / 0 |
+
+and 1.9.11.03 Education, Place 1 / Route 2: +0.469 ns, 0 / 0. Logic 86-87 %,
+CLS 97 %. In every one of them the 25 worst paths are New Juice's own
+(`mp_debouncer` to the memory clients) and none touches the meter, its
+screen or HDMI. A cheaper trial (four bars, no peak marks, 222 logic cells
+less) closed 0 / 1 (+0.104 ns) and failed 1 / 2 (-2.149 ns, 37 endpoints):
+less logic does not mean a steadier placement at this fill.
 
 The tightest paths are still New Juice's own: from the bus snapshot
 (`mp_debouncer`) through the slot decode to the SDRAM request of the memory
@@ -118,6 +143,8 @@ Results on this branch (WSL Ubuntu-24.04, Icarus 12, sv2v):
 | New Juice's OPLL without sv2v (`opll`) | PASS (+-4085) |
 | Whole board (`board/run_board.sh`) | 68/68 PASS: boot with New Juice's start-up test and ROM copy through the arbiter, YRW801 copy (synthetic 4 KB) and checksum, FM status/register read-back/timer /INT, wave ID and memory through 7Eh/7Fh with /WAIT, wave RAM at SDRAM 0x700000, nothing above 1 MB, 2 MB mapper, Super-MegaRAM, Nextor ROM, LINEAR mode, OPLL writes, PCM and FM to the I2S amplifier at 48.2 kHz decoded as I2S with both halves of every frame equal and every word exactly the mix sample, the mono mix saturating at 7FFFh/8000h, the OPL4 releasing the bus at the same time as New Juice's own ports (10 ns after the design's /RD, both), YRW801 kept across an MSX /RESET, no illegal SDRAM command, no decayed row |
 | Whole board, flash without YRW801 (`run_board.sh blank`) | 12/12 PASS: the checksum flags the image and the LED flashes |
+| Whole board with HDMI (`run_board.sh hdmi`, two simulations, about 36 minutes) | 4/4 PASS (32/32 checks): New Juice starts the video PLL after the MSX /RESET; through the verification receiver, 1036800 of 1036800 pixels are the ones sent; the two VU frames are, pixel for pixel, `vu_check.py`'s picture (FM 17/0, wave 24/24, out 25/24 segments; then, with the FM muted, its bar down to 16 and its peak mark held at 17), and those levels are the ones an independent model of the meter gives from each bar's own source; the debugger frame is its terminal, pixel for pixel (10318 white pixels, nothing of the meter); 2880 audio samples equal to the transmitted ones, left and right apart; 720x480p geometry, ACR (N 6272, CTS 29988), channel status (44.1 kHz, 16 bits), AVI (VIC 2), Audio InfoFrame, no protocol error. Negative control (FM R bar fed from wave R): fails, on the meter check alone |
+| VU meter (`vu/run_vu.sh`) | 5/5 PASS: `vu_meter_nj` gives MoonTANG's `vu_meter` levels and peak marks in 1400 of 1400 random frames (and a HOLD 44 mutant fails); the screen with the fork's texts, through `hdmi.sv`, is pixel for pixel `vu_check.py`'s picture (and a level one segment off is rejected). With `VG=` the X2 netlist: its three block-RAM ROMs hold what the simulation holds (512 + 128 + 512 entries, and a flipped bit is caught); with `GL=` a 1.9.12.03 synthesis netlist of the screen alone (`vu/syn/run_syn.sh`) draws the same frame, pixel for pixel: 9/9 PASS |
 
 ## Known limits
 
@@ -144,7 +171,10 @@ Results on this branch (WSL Ubuntu-24.04, Icarus 12, sv2v):
   100 %.
 - The OPL4 joins the mix at the level of the OPLL; the balance against the
   other New Juice sources has to be set by ear on real hardware.
-- HDMI is not exercised by the board bench (its PLL is held in reset there).
+- HDMI drops with every MSX /RESET and is off with the MSX off: New Juice
+  resets its video PLL and the transmitter with the MSX (unchanged). The VU
+  meter has been simulated with the whole design and an HDMI receiver, not
+  seen on a screen yet.
 - Unchanged New Juice behaviour, seen in the bench: with the MSX off (all
   slot lines at 0) New Juice holds /WAIT and turns the data transceiver
   towards the slot, although it drives nothing.

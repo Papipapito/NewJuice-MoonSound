@@ -27,6 +27,15 @@ not**. Each was tried once, so an intermittent failure is not ruled out yet. See
 itself (MoonBlaster / MBWave and their wave RAM detection), SCC, OPLL,
 SFG-01, the debugger, HDMI, and the OPL4 level in the mix, by ear.
 
+HDMI (6 Oct 2026): X1 shows a black picture unless the debugger is on (the
+sound scope left with Franky). The sources now show a **VU meter** there:
+the OPL4 FM and wave, left and right, what HDMI plays, left and right, the
+YRW801 state and whether the MSX clock runs. Built as **X2** (Gowin
+1.9.12.03, Place 1 / Route 2, 0 / 0 violated endpoints) and simulated with
+the whole design and an HDMI receiver; not seen on a screen yet. The
+versioned bitstream is still X1, without the meter. See
+[The VU meter on HDMI](#the-vu-meter-on-hdmi).
+
 ## Why this repository is private
 
 New Juice has no license, so all its rights stay with its author and a fork
@@ -50,7 +59,7 @@ been sent.
 | MoonSound FM (ports C4h-C7h) | — | **yes**, OPL3, stereo |
 | MoonSound wavetable (ports 7Eh-7Fh) | — | **yes**, 24 voices, YRW801 + 1 MB wave RAM, F8h/F9h mix registers |
 | Franky: SMS VDP and SN76489 (ports 48h/49h, 88h/89h) | yes | **removed** |
-| Sound scope on HDMI | yes | **removed** (it drew into Franky's framebuffer) |
+| HDMI picture with the debugger off | sound scope (drawn into Franky's framebuffer) | **VU meter**: OPL4 FM L/R, wave L/R and the HDMI mix L/R, YRW801 and MSX state (drawn on the fly, no framebuffer) |
 | Memory mapper | 4 MB | **2 MB** |
 | Nextor + microSD, Super-MegaRAM SCC, PSG, OPLL, SFG-01 (OPM), Z80 debugger with its HDMI terminal | yes | yes, unchanged |
 | Audio to the MSX (I2S amplifier of the Tang Nano 20K, mono) | about 22 kHz | **48.2 kHz**, mix saturates instead of wrapping around |
@@ -59,7 +68,8 @@ been sent.
 ### What is lost
 
 - **Franky**: SMS games and anything else that uses its VDP or its SN76489.
-- **The sound scope** on HDMI. The debugger terminal on HDMI stays.
+- **The sound scope** on HDMI; a VU meter takes its place. The debugger
+  terminal on HDMI stays.
 - **Half of the mapper**: 2 MB (128 pages) instead of 4 MB. Pages 80h-FFh
   mirror 00h-7Fh. IN FCh-FFh returns the register as written, like New
   Juice: a machine with a bigger internal mapper (an OCM / MSXBOOK has 4 MB)
@@ -96,11 +106,15 @@ reformatted.
 | `a36475a` | Bitstream: version the fork's own bitstream, byte for byte |
 | `658349c`, `1f02ec3` | Benches: fail on a stale simulation; `.gitignore`: keep any YRW801 out |
 | `f3e4a2c` | Memory map: read the mapper registers back as written again, like New Juice (reverts `c02d2a4`; this is the build that boots on the MSXBOOK) |
+| `a83092a`, `8004964` | Docs: board results and the SDRAM interface; the bitstream X1 versioned |
+| `437b716` | HDMI: VU meter on the HDMI picture when the debugger is off |
+| `fc52a74` | Benches: VU meter (against MoonTANG's, through `hdmi.sv`, ROMs and netlist) and HDMI on the board bench |
 
 New Juice files touched: `src/top.v`, `src/top.sdc`, `new-juice.gprj`,
 `src/rpll/rpll_main.v` (CLKOUTD3 brought out), `src/sdram_mapper.v`,
 `src/flash_roms.v`, `src/linear_rom.v`, `src/super_megaram.v`,
-`src/audio_drive.v`, `Makefile` (new `yrw801` target),
+`src/audio_drive.v` and `src/top.v` again for the VU meter (only the picture
+multiplexer of HDMI, the meter and its screen), `Makefile` (new `yrw801` target),
 `impl/new-juice_process_config.json` (Route option 2), `.gitignore` and a
 three-line notice at the top of `README.md`. New: `src/moonsound/`,
 `tools/sim/`, `MOONSOUND.md`, this file and `docs/`.
@@ -164,16 +178,16 @@ rate and timers were retuned for 36 MHz (`src/moonsound/opl3/opl3_pkg.sv`).
 
 GW2AR-LV18QN88C8/I7 (Tang Nano 20K).
 
-| | New Juice (author's bitstream, Gowin 1.9.11) | This fork, 1.9.12.03 (bitstream for the board test) | This fork, 1.9.11.03 Education |
-|---|---|---|---|
-| Logic | 12546 / 20736 (61 %) | 17188 (83 %) | 17246 (83 %) |
-| CLS | 9002 / 10368 (87 %) | 9907 (96 %) | 9825-9899 (95 %) |
-| Registers (FF) | 8157 | 9523 | 9192 |
-| BSRAM | 46 / 46 | 31 / 46 | 31 / 46 |
-| DSP | 2 | 3.5 | 3.5 |
-| PRIMARY / LW clocks | 3 / 8, 8 / 8 | 5 / 8, 8 / 8 | 5 / 8, 8 / 8 |
-| rPLL | 2 / 2 | 2 / 2 | 2 / 2 |
-| Worst setup slack (main_clk, 108 MHz) | +0.065 ns | **+0.779 ns** | +0.060 to +1.014 ns |
+| | New Juice (author's bitstream, Gowin 1.9.11) | This fork, 1.9.12.03 (X1, bitstream for the board test) | This fork, 1.9.11.03 Education | With the VU meter, 1.9.12.03 (X2) | With the VU meter, 1.9.11.03 Education, P1 / R2 |
+|---|---|---|---|---|---|
+| Logic | 12546 / 20736 (61 %) | 17188 (83 %) | 17246 (83 %) | 17807 (86 %) | 18046 (87 %) |
+| CLS | 9002 / 10368 (87 %) | 9907 (96 %) | 9825-9899 (95 %) | 10057 (97 %) | 10030 (97 %) |
+| Registers (FF) | 8157 | 9523 | 9192 | 9988 | 9630 |
+| BSRAM | 46 / 46 | 31 / 46 | 31 / 46 | 34 / 46 | 34 / 46 |
+| DSP | 2 | 3.5 | 3.5 | 3.5 | 3.5 |
+| PRIMARY / LW clocks | 3 / 8, 8 / 8 | 5 / 8, 8 / 8 | 5 / 8, 8 / 8 | 5 / 8, 8 / 8 | 5 / 8, 8 / 8 |
+| rPLL | 2 / 2 | 2 / 2 | 2 / 2 | 2 / 2 | 2 / 2 |
+| Worst setup slack (main_clk, 108 MHz) | +0.065 ns | **+0.779 ns** | +0.060 to +1.014 ns | **+0.088 ns** (P1 / R2) | +0.469 ns |
 
 Timing was checked in 18 builds: both tool versions and every place-and-route
 option Gowin accepts for this device (10 different implementations). All 18
@@ -185,7 +199,19 @@ engine 41.5 / 36 MHz, clkin 53.9 / 27 MHz, cpu_clk 67.4 / 3.58 MHz. The
 tightest paths are still New Juice's own (from `mp_debouncer` to the memory
 clients). The full sweep is in [MOONSOUND.md](MOONSOUND.md).
 
-The chip is full (96 % CLS), so slack moves by about 1 ns from build to
+With the VU meter (X2, sources of `437b716`) the same 1.9.12.03 sweep gives,
+as worst setup slack and violated setup / hold endpoints: Place 1 / Route 2
+(the project setting, the bitstream X2) +0.088 ns, 0 / 0; P1 / R1 +0.212,
+0 / 0; P1 / R0 +0.017, 0 / 0; P0 / R2 +0.020, 0 / 0; **P0 / R1 -0.343, 15 / 0**.
+1.9.11.03 Education, P1 / R2: +0.469, 0 / 0. The failing paths are New
+Juice's own, as in every build so far (`mp_debouncer` to `flash_roms` and
+`linear_rom`); the meter is on none of the 25 worst. A cheaper meter does not
+make it steadier: a trial build with four bars and no peak marks (222 logic cells
+less) closed P0 / R1 (+0.104) and failed P1 / R2 (-2.149 ns, 37 endpoints).
+At this fill, which builds close is a matter of placement, so check every
+new build.
+
+The chip is full (96-97 % CLS), so slack moves by about 1 ns from build to
 build. After any change, read "Numbers of Setup Violated Endpoints" and
 "Numbers of Hold Violated Endpoints" in `impl/pnr/new-juice_tr_content.html`:
 the summary of the IDE can show no TNS while a clock-domain crossing fails.
@@ -193,6 +219,44 @@ the summary of the IDE can show no TNS while a clock-domain crossing fails.
 Gowin does not time the SDRAM pins in any of these builds: New Juice's SDC
 leaves them unconstrained, and so does this branch. The next two sections
 say what that means and what was measured.
+
+## The VU meter on HDMI
+
+With the debugger off, HDMI shows this picture (720x480p, New Juice's video
+mode); with it on, the debugger terminal, as before:
+
+![VU meter on HDMI](docs/img/vu_hdmi_nj.png)
+
+*A frame as the HDMI receiver of the board bench took it from the cable (simulation, `tools/sim/board/run_board.sh hdmi`): the FM, playing on the left only, has just been muted, so its bar falls and its peak mark stays.*
+
+- Bars, 28 segments of 1.5 dB (the top one is full scale, the bottom one
+  42 dB below), with a peak mark that stays 45 frames: **FM** L/R and
+  **WAVE** L/R are the two halves of the OPL4 mix (after the F8h level), and
+  **OUT** L/R is what HDMI plays (the whole New Juice mix, with HDMI's own
+  x2).
+- **YRW801**: `...` while it is copied, `OK`, `NO VALIDA` (copied, but the
+  checksum says it is not the YRW801) or `ERROR` (the copy failed).
+  **MSX**: `OK` while the slot clock runs.
+- Footer: the build (`X2` and the date, a parameter in `src/top.v`).
+
+How it is made (MoonTANG's screen and meter, adapted to a full chip):
+`src/moonsound/vu_screen.v` draws each pixel from the coordinates of the
+HDMI transmitter, without a framebuffer; its title, subtitle and footer are
+now parameters, and its two text tables are ROMs in block RAM. The meter,
+`src/moonsound/vu_meter_nj.v`, does exactly what MoonTANG's `vu_meter.v`
+does (checked frame by frame on random signals) with about a third of its
+logic. It runs on opl4_clk54; the HDMI samples (main_clk) enter it through
+a register, and its outputs change once per frame, in the vertical blanking,
+so the screen (27 MHz) reads them with no synchronizer. The meter and the
+screen cost 255 + 252 LUTs (and 52 + 10 ALUs), 279 + 89 registers and 3 block RAMs (X2).
+
+The HDMI transmitter and the video PLL are reset with every MSX /RESET, as
+in New Juice: the picture (and HDMI's sound) can drop for a moment, and the
+TV may need to find the signal again, each time the MSX is reset. With the
+MSX off there is no HDMI at all. The picture is drawn for 16:9 (as in
+MoonTANG) but New Juice sends 720x480p as VIC 2, the 4:3 code (its AVI
+InfoFrame gives no picture aspect), so a TV that follows it shows the
+picture narrower.
 
 ## Board results
 
@@ -211,6 +275,7 @@ mapper), with the same ROMs and YRW801 in the flash; only the bitstream at
 | Y1 | `16a9664` | 1.9.12.03, 0 / 1 | `a3d0917f9bdbbd45c683f8746dd00447` | MSX logo, then nothing |
 | Y2 | `16a9664` | 1.9.12.03, 0 / 2 | `ddc6253b09ed2b8a5b723d2e887434ff` | not tried yet |
 | X1 | `16a9664` without bit 7 = the sources of `f3e4a2c` | 1.9.12.03, 1 / 2 | `276425bea832b1272213ce9a55dcfe29` | **boots** |
+| X2 | `437b716` (X1 + the VU meter on HDMI) | 1.9.12.03, 1 / 2 | `81e3e381e6a8b95b9e7c1e295b34bfd9` | not tried yet |
 
 - The file first tried as "B3" was New Juice's own bitstream from upstream
   (its header says 1.9.11.03 Education; its MD5 is that of
@@ -414,6 +479,9 @@ The details are in [MOONSOUND.md](MOONSOUND.md). In short:
   half fail with or without it, so that limit is New Juice's own.
 - The OPL4 joins the mix at the level of the OPLL; the balance has to be set
   by ear on the board.
+- HDMI (picture and sound) drops with every MSX /RESET, and there is none
+  with the MSX off: New Juice resets its video PLL and the transmitter with
+  the MSX. The VU meter (X2) has not been seen on a screen yet.
 
 ## Licenses
 
@@ -433,6 +501,7 @@ The MoonSound (`src/moonsound/`, details and full texts in
 | SPI flash reader | `flash_rw.v` | derived from `flash.v` of lfantoniosi's WonderTANG (Copyright (c) 2023 lfantoniosi); changes by Albert "Papipapito" with Claude | BSD-2-Clause + GPL-3.0 for the changes |
 | MoonTANG glue: PCM ports and wave cache, wave memory port, YRW801 loader | `opl4_pcm.v`, `wave_sdram.v`, `yrw801_loader.v` | Albert "Papipapito" with Claude | GPL-3.0 |
 | New Juice glue: bus, clocks, flash hand-over, mix; SDRAM arbiter | `moonsound_nj.sv`, `nj_sdram_arb.v` | Albert "Papipapito" with Claude | GPL-3.0 |
+| VU meter on HDMI: screen, font, level meter | `vu_screen.v` (MoonTANG, changed), `font8x8.v` (MoonTANG, the clean-room font of SlotDoctor), `vu_meter_nj.v` | Albert "Papipapito" with Claude | GPL-3.0 |
 
 Because `afifo.v` is GPL-3.0, `src/moonsound/` as a whole is GPL-3.0. The
 simulation benches (`tools/sim/`) are by Albert "Papipapito" with Claude,
