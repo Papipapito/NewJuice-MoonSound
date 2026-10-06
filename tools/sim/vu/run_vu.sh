@@ -89,7 +89,8 @@ fi
 if [ -n "${GL:-}" ]; then
     echo "################ 4. the synthesis netlist of vu_screen ($GL), through hdmi.sv ################"
     GW=${GOWIN_SIMLIB:-/mnt/c/Gowin/Gowin_V1.9.12.03_x64/IDE/simlib/gw2a/prim_sim.v}
-    rm -f build/vu_hdmi_gl.vvp build/vu_hdmi_gl.log build/check_gl.log
+    # the RTL frame of step 2 goes first, so that only the netlist can pass
+    rm -f build/vu_hdmi_gl.vvp build/vu_hdmi_gl.log build/check_gl.log build/vu_hdmi_nj.ppm build/frames_hdmi_nj.txt
     iverilog -g2012 -s tb_vu_hdmi_nj -DVU_NETLIST -o build/vu_hdmi_gl.vvp         "-DVU_TITLE=${Q}$TITLE${Q}" "-DVU_TITLE_N=${#TITLE}" "-DVU_SUB=${Q}$SUB${Q}" "-DVU_SUB_N=${#SUB}"         "-DVU_FOOT=${Q}$FOOT${Q}" "-DVU_FOOT_N=${#FOOT}"         "$GL" "$GW" build/hdmi_nj_sv2v.v tb_vu_hdmi_nj.v 2>&1 | grep -v "warning\|timescale" | head -5
     ( cd build && vvp -n vu_hdmi_gl.vvp ) | grep -a -v "^VCD\|prim_sim" | tee build/vu_hdmi_gl.log | tail -2
     python3 vu_check.py build build/png_gl "$R/src/moonsound/font8x8.v" --list frames_hdmi_nj.txt         --title "$TITLE" --sub "$SUB" --foot "$FOOT" | tee build/check_gl.log
