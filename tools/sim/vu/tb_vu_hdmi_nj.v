@@ -36,6 +36,14 @@
 `define VU_FOOT "NEW JUICE MOONSOUND"
 `define VU_FOOT_N 19
 `endif
+// the YRW801 and MSX states drawn (run_vu.sh also runs the other ones):
+// ST_ROM 0 = copying, 1 = OK, 2 = error, 3 = not a YRW801; ST_MSX 0/1
+`ifndef ST_ROM
+`define ST_ROM 1
+`endif
+`ifndef ST_MSX
+`define ST_MSX 1
+`endif
 
 module tb_vu_hdmi_nj;
 
@@ -50,8 +58,8 @@ module tb_vu_hdmi_nj;
     // los niveles del cuadro "b" de tb_vu_screen
     wire [29:0] level  = {5'd17, 5'd21, 5'd8,  5'd12, 5'd19, 5'd23};
     wire [29:0] peak   = {5'd20, 5'd25, 5'd13, 5'd16, 5'd22, 5'd26};
-    wire [1:0]  st_rom = 2'd1;
-    wire        st_msx = 1'b1;
+    wire [1:0]  st_rom = `ST_ROM;
+    wire        st_msx = `ST_MSX;
 
     wire [9:0]  cx, cy;
     wire [23:0] rgb;

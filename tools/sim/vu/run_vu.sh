@@ -10,6 +10,8 @@
 #     through the fork's hdmi module (src/hdmi, via sv2v); the frame at the
 #     output of hdmi.sv is compared pixel for pixel with vu_check.py's model.
 #     Negative control: the same frame against a one-segment-wrong level must FAIL.
+#     Then the same with the other YRW801 states (copying, error, not a
+#     YRW801) and with the MSX clock stopped, each against the model.
 #  3. only with VG=<impl/gwsynthesis/new-juice.vg of a build>: the three ROMs
 #     of vu_screen (text elements, strings, font) as Gowin synthesis filled its
 #     block RAMs, against the simulation (tb_vu_rom_dump.v + rom_check.py).
@@ -63,6 +65,17 @@ pass hdmi       'grep -q "^RESULTADO HDMI: PASS" build/vu_hdmi_nj.log'
 pass model      'grep -q "^MODELO: 1 cuadros .*PASS" build/check_nj.log'
 pass model_neg  'grep -q "^MODELO: .*FAIL" build/check_nj_bad.log'
 
+# the other YRW801 and MSX states (the frame above has YRW801 OK, MSX OK):
+# ... (copying), ERROR, NO VALIDA, and MSX --
+for st in "0 1" "2 1" "3 1" "1 0"; do
+    set -- $st; d=build/st_$1$2; rm -rf "$d"; mkdir -p "$d"
+    iverilog -g2012 -s tb_vu_hdmi_nj -DST_ROM=$1 -DST_MSX=$2 -o "$d/vu.vvp"         "-DVU_TITLE=${Q}$TITLE${Q}" "-DVU_TITLE_N=${#TITLE}" "-DVU_SUB=${Q}$SUB${Q}" "-DVU_SUB_N=${#SUB}"         "-DVU_FOOT=${Q}$FOOT${Q}" "-DVU_FOOT_N=${#FOOT}"         $R/src/moonsound/vu_screen.v $R/src/moonsound/font8x8.v build/hdmi_nj_sv2v.v tb_vu_hdmi_nj.v
+    ( cd "$d" && vvp -n vu.vvp ) > "$d/vu.log"
+    python3 vu_check.py "$d" "$d/png" "$R/src/moonsound/font8x8.v" --list frames_hdmi_nj.txt         --title "$TITLE" --sub "$SUB" --foot "$FOOT" > "$d/check.log" 2>&1 || true
+    grep -h "st_rom=" "$d/check.log"; tail -1 "$d/check.log"
+    pass "st_rom$1_msx$2" "grep -q '^RESULTADO HDMI: PASS' $d/vu.log && grep -q 'st_rom=$1 st_msx=$2' $d/check.log && grep -q '^MODELO: 1 cuadros .*PASS' $d/check.log"
+done
+
 if [ -n "${VG:-}" ]; then
     echo "################ 3. the ROMs of vu_screen in a synthesis netlist ($VG) ################"
     iverilog -g2012 -s tb_vu_rom_dump -o build/rom_dump.vvp         "-DVU_TITLE=${Q}$TITLE${Q}" "-DVU_TITLE_N=${#TITLE}" "-DVU_SUB=${Q}$SUB${Q}" "-DVU_SUB_N=${#SUB}"         "-DVU_FOOT=${Q}$FOOT${Q}" "-DVU_FOOT_N=${#FOOT}"         $R/src/moonsound/vu_screen.v $R/src/moonsound/font8x8.v tb_vu_rom_dump.v
@@ -84,5 +97,5 @@ if [ -n "${GL:-}" ]; then
     pass gl_model  'grep -q "^MODELO: 1 cuadros .*PASS" build/check_gl.log'
 fi
 
-echo "run_vu: $npass/$n PASS${failed:+ (failed:$failed)}  (eq, eq_neg must FAIL, hdmi, model, model_neg must FAIL${VG:+, rom, rom_neg must FAIL}${GL:+, gl_hdmi, gl_model})"
+echo "run_vu: $npass/$n PASS${failed:+ (failed:$failed)}  (eq, eq_neg must FAIL, hdmi, model, model_neg must FAIL, the four other states${VG:+, rom, rom_neg must FAIL}${GL:+, gl_hdmi, gl_model})"
 [ "$npass" = "$n" ]

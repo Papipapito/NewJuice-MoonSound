@@ -6,8 +6,8 @@
 #   blank           the flash has no YRW801: the checksum must flag it (and the LED)
 #   all             both at once (two cores)
 #   hdmi            the video PLL runs: VU meter and debugger picture and HDMI audio
-#                   through a verification receiver (hdmi_nj.vh), and its negative
-#                   control (two cores, about 75 ms of board time each)
+#                   through a verification receiver (hdmi_nj.vh), and its two negative
+#                   controls (three cores, about 75 ms of board time each)
 set -e
 cd "$(dirname "$0")"
 R=$(cd ../../.. && pwd)
@@ -85,16 +85,21 @@ case "$MODE" in
            run main & run blank & wait
            show main; show blank; verdict main blank ;;
     hdmi)
-        # Negative control: the FM R bar is fed from the wave R signal. The
-        # meter model (fed from each bar's own source) must then disagree,
-        # and that must be the only failing check.
+        # Negative controls: (neg) the FM R bar is fed from the wave R signal;
+        # (neg2) the wave L and wave R bars are swapped (the bench pans the
+        # wave so that they differ). The meter model (fed from each bar's own
+        # source) must then disagree, and that must be the only failing check.
         cp build/nj_sv2v.v build/nj_sv2v_neg.v
         patch "opl4_vu_wave_r, opl4_vu_wave_l, opl4_vu_fm_r, opl4_vu_fm_l" \
               "opl4_vu_wave_r, opl4_vu_wave_l, opl4_vu_wave_r, opl4_vu_fm_l" build/nj_sv2v_neg.v
+        cp build/nj_sv2v.v build/nj_sv2v_neg2.v
+        patch "opl4_vu_wave_r, opl4_vu_wave_l, opl4_vu_fm_r, opl4_vu_fm_l" \
+              "opl4_vu_wave_l, opl4_vu_wave_r, opl4_vu_fm_r, opl4_vu_fm_l" build/nj_sv2v_neg2.v
         rm -rf build/hdmi_*.ppm build/hdmi*_frames*.txt build/png build/png_bad
         EXTRA=../common/hdmi_rx_check.v comp hdmi -DWITH_HDMI -DHDMI_TAG=\"hdmi\"
         EXTRA=../common/hdmi_rx_check.v NETLIST=build/nj_sv2v_neg.v comp hdmi_neg -DWITH_HDMI -DHDMI_TAG=\"hdmi_neg\"
-        run hdmi & run hdmi_neg & wait
+        EXTRA=../common/hdmi_rx_check.v NETLIST=build/nj_sv2v_neg2.v comp hdmi_neg2 -DWITH_HDMI -DHDMI_TAG=\"hdmi_neg2\"
+        run hdmi & run hdmi_neg & run hdmi_neg2 & wait
         show hdmi
         echo "################ vu_check.py: the VU frames on the cable against the model ################"
         FOOT=$(sed -n 's/^ *"\(NEW JUICE MOONSOUND[^"]*\)";.*/\1/p' "$R/src/top.v")
@@ -107,14 +112,18 @@ case "$MODE" in
             --title "NEW JUICE" --sub "+ MOONSOUND OPL4" --foot "$FOOT" > build/hdmi_check_bad.log 2>&1 || true
         echo "################ negative control: FM R bar fed from wave R ################"
         grep -a "FAIL\]\|RESULTADO\|(vumetro)\|modelo del medidor" build/hdmi_neg.log | tail -12
+        echo "################ negative control 2: wave L and wave R bars swapped ################"
+        grep -a "FAIL\]\|RESULTADO\|(vumetro)\|modelo del medidor" build/hdmi_neg2.log | tail -12
         n=0; npass=0; failed=""
         n=$((n+1)); if grep -a -q "RESULTADO: PASS" build/hdmi.log; then npass=$((npass+1)); else failed="$failed hdmi"; fi
         n=$((n+1)); if grep -q "^MODELO: 2 cuadros .*PASS" build/hdmi_check.log; then npass=$((npass+1)); else failed="$failed vu_check"; fi
         n=$((n+1)); if grep -q "^MODELO: .*FAIL" build/hdmi_check_bad.log; then npass=$((npass+1)); else failed="$failed vu_check_neg"; fi
         n=$((n+1)); if grep -a -q "RESULTADO: FAIL" build/hdmi_neg.log && grep -a -q "FAIL\] vumetro: las barras" build/hdmi_neg.log \
                        && [ "$(grep -a -c 'FAIL\]' build/hdmi_neg.log)" = 1 ]; then npass=$((npass+1)); else failed="$failed hdmi_neg"; fi
+        n=$((n+1)); if grep -a -q "RESULTADO: FAIL" build/hdmi_neg2.log && grep -a -q "FAIL\] vumetro: las barras" build/hdmi_neg2.log \
+                       && [ "$(grep -a -c 'FAIL\]' build/hdmi_neg2.log)" = 1 ]; then npass=$((npass+1)); else failed="$failed hdmi_neg2"; fi
         echo "run_board: $npass/$n PASS${failed:+ (failed:$failed)}"
-        echo "  (hdmi bench; vu_check of its frames; vu_check of a wrong level must FAIL; negative control must FAIL, on the meter check only)"
+        echo "  (hdmi bench; vu_check of its frames; vu_check of a wrong level must FAIL; both negative controls must FAIL, on the meter check only)"
         [ "$npass" = "$n" ] ;;
     *)     echo "unknown mode: $MODE"; exit 2 ;;
 esac

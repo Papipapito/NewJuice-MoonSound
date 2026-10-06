@@ -23,7 +23,9 @@
 //       six bars (FM and wave halves inside moonsound_nj, the samples HDMI
 //       plays) and must give, frame after frame, the levels and peak marks
 //       the screen draws. If a bar were fed from another signal, this fails
-//       (run_board.sh hdmi runs that negative control too);
+//       (run_board.sh hdmi runs two negative controls: the FM R bar fed from
+//       wave R, and wave L and wave R swapped; the wave is panned so that
+//       its two sides differ);
 //   V4  with the debugger on (OUT 8Fh,57h, New Juice's software toggle) the
 //       frame on the cable is the debugger terminal pixel for pixel (white on
 //       black) and nothing of the VU meter;
@@ -310,7 +312,7 @@
             hrx_t0 = $realtime;
             $display("         HDMI en marcha en t = %0.2f ms", hrx_t0 / 1.0e6);
 
-            $display("== H2. sonido: onda PCM a los dos lados, FM solo a la izquierda ==");
+            $display("== H2. sonido: onda PCM a los dos lados (12 dB menos a la izquierda), FM solo a la izquierda ==");
             fm_w(1, 8'h05, 8'h03);                             // NEW + NEW2: OPL3 panning, wave part on
             wv_w(8'h20, 8'h00); wv_w(8'h38, 8'h00); wv_w(8'h50, 8'h01);
             wv_w(8'h08, 8'h00);
@@ -318,7 +320,10 @@
             io_rd(16'h00C4);
             while (rdv[1] && polls < 200) begin #20_000; io_rd(16'h00C4); polls = polls + 1; end
             ok(!rdv[1], "flag LD del status se limpia (cabecera leida de la SDRAM)");
-            wv_w(8'h68, 8'h80);
+            // key on, panpot 1: in this core (ymf278b_gowin.v) the left side
+            // 12 dB down, so that wave L and wave R differ by 8 segments and a
+            // swap of the two shows on the meter (run_board.sh hdmi checks it)
+            wv_w(8'h68, 8'h81);
             fm_w(0, 8'h20, 8'h01); fm_w(0, 8'h23, 8'h01);
             fm_w(0, 8'h40, 8'h3F); fm_w(0, 8'h43, 8'h00);
             fm_w(0, 8'h60, 8'hF0); fm_w(0, 8'h63, 8'hF0);
