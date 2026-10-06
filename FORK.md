@@ -30,11 +30,14 @@ SFG-01, the debugger, HDMI, and the OPL4 level in the mix, by ear.
 HDMI (6 Oct 2026): X1 shows a black picture unless the debugger is on (the
 sound scope left with Franky). The sources now show a **VU meter** there:
 the OPL4 FM and wave, left and right, what HDMI plays, left and right, the
-YRW801 state and whether the MSX clock runs. Built as **X2** (Gowin
-1.9.12.03, Place 1 / Route 2, 0 / 0 violated endpoints) and simulated with
-the whole design and an HDMI receiver; not seen on a screen yet. The
-versioned bitstream is still X1, without the meter. See
-[The VU meter on HDMI](#the-vu-meter-on-hdmi).
+YRW801 state and whether the MSX clock runs. Built as **X3** (Gowin
+1.9.12.03, Place 0 / Route 1, 0 / 0 violated endpoints, worst setup slack
++0.027 ns; it closes in all four Place 0-1 / Route 1-2 combinations and with
+1.9.11.03 Education, by 4 to 27 ps with 1.9.12) and simulated with the whole
+design and an HDMI receiver; not seen on a screen yet. **The versioned
+bitstream, `impl/pnr/new-juice.fs`, is still X1**, without the meter, and
+stays X1 until X3 has been tried on the MSXBOOK; X3 is handed out apart, not
+in git. See [The VU meter on HDMI](#the-vu-meter-on-hdmi).
 
 ## Why this repository is private
 
@@ -178,40 +181,81 @@ rate and timers were retuned for 36 MHz (`src/moonsound/opl3/opl3_pkg.sv`).
 
 GW2AR-LV18QN88C8/I7 (Tang Nano 20K).
 
-| | New Juice (author's bitstream, Gowin 1.9.11) | This fork, 1.9.12.03 (X1, bitstream for the board test) | This fork, 1.9.11.03 Education | With the VU meter, 1.9.12.03 (X2) | With the VU meter, 1.9.11.03 Education, P1 / R2 |
-|---|---|---|---|---|---|
-| Logic | 12546 / 20736 (61 %) | 17188 (83 %) | 17246 (83 %) | 17807 (86 %) | 18046 (87 %) |
-| CLS | 9002 / 10368 (87 %) | 9907 (96 %) | 9825-9899 (95 %) | 10057 (97 %) | 10030 (97 %) |
-| Registers (FF) | 8157 | 9523 | 9192 | 9988 | 9630 |
-| BSRAM | 46 / 46 | 31 / 46 | 31 / 46 | 34 / 46 | 34 / 46 |
-| DSP | 2 | 3.5 | 3.5 | 3.5 | 3.5 |
-| PRIMARY / LW clocks | 3 / 8, 8 / 8 | 5 / 8, 8 / 8 | 5 / 8, 8 / 8 | 5 / 8, 8 / 8 | 5 / 8, 8 / 8 |
-| rPLL | 2 / 2 | 2 / 2 | 2 / 2 | 2 / 2 | 2 / 2 |
-| Worst setup slack (main_clk, 108 MHz) | +0.065 ns | **+0.779 ns** | +0.060 to +1.014 ns | **+0.088 ns** (P1 / R2) | +0.469 ns |
+| | New Juice (author's bitstream, Gowin 1.9.11.03 Education) | X1: sources of `f3e4a2c`, 1.9.12.03, P1 / R2 (the versioned bitstream, boots) | X3: with the VU meter, sources of `aa2c2eb`, 1.9.12.03, P0 / R1 | X3 sources, 1.9.11.03 Education, P1 / R2 |
+|---|---|---|---|---|
+| Logic | 12546 / 20736 (61 %) | 17160 (83 %) | 17807 (86 %) | 18046 (88 %) |
+| CLS | 9002 / 10368 (87 %) | 9893 (96 %) | 10071 (98 %) | 10030 (97 %) |
+| Logic registers (FF) | 8157 | 9531 | 9923 | 9565 |
+| BSRAM | 46 / 46 | 31 / 46 | 34 / 46 | 34 / 46 |
+| DSP | 2 | 3.5 | 3.5 | 3.5 |
+| PRIMARY / LW clocks | 3 / 8, 8 / 8 | 5 / 8, 8 / 8 | 5 / 8, 8 / 8 | 5 / 8, 8 / 8 |
+| rPLL | 2 / 2 | 2 / 2 | 2 / 2 | 2 / 2 |
+| Violated setup / hold endpoints | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Worst setup slack (main_clk, 108 MHz) | +0.065 ns | **+0.832 ns** | **+0.027 ns** | +0.605 ns |
 
-Timing was checked in 18 builds: both tool versions and every place-and-route
-option Gowin accepts for this device (10 different implementations). All 18
-have **0 setup and 0 hold violated endpoints**; the worst hold slack is
-+0.074 ns. The project is set to Place option 1 / Route option 2, the best of
-the sweep (+0.779 ns with 1.9.12.03, +0.578 ns with 1.9.11.03). In that build
-the other clocks reach, against what they need: opl4_clk54 95.2 / 54 MHz, PCM
-engine 41.5 / 36 MHz, clkin 53.9 / 27 MHz, cpu_clk 67.4 / 3.58 MHz. The
-tightest paths are still New Juice's own (from `mp_debouncer` to the memory
-clients). The full sweep is in [MOONSOUND.md](MOONSOUND.md).
+Figures as each build's `new-juice.rpt.txt` gives them (Gowin rounds the
+percentages up); registers are "Logic Register as FF" (the 66-69 I/O
+registers apart). From X1 to X3 the meter costs 647 logic cells, 178 CLS,
+392 registers and 3 block RAMs, and 0.805 ns of setup slack.
 
-With the VU meter (X2, sources of `437b716`) the same 1.9.12.03 sweep gives,
-as worst setup slack and violated setup / hold endpoints: Place 1 / Route 2
-(the project setting, the bitstream X2) +0.088 ns, 0 / 0; P1 / R1 +0.212,
-0 / 0; P1 / R0 +0.017, 0 / 0; P0 / R2 +0.020, 0 / 0; **P0 / R1 -0.343, 15 / 0**.
-1.9.11.03 Education, P1 / R2: +0.469, 0 / 0. The failing paths are New
-Juice's own, as in every build so far (`mp_debouncer` to `flash_roms` and
-`linear_rom`); the meter is on none of the 25 worst. A cheaper meter does not
-make it steadier: a trial build with four bars and no peak marks (222 logic cells
-less) closed P0 / R1 (+0.104) and failed P1 / R2 (-2.149 ns, 37 endpoints).
-At this fill, which builds close is a matter of placement, so check every
-new build.
+Before the meter, the sources of `16a9664` (X1 plus the mapper read-back
+with bit 7 set) were checked in 18 builds: both tool versions and every
+place-and-route option Gowin accepts for this device (10 different
+implementations). All 18 have **0 setup and 0 hold violated endpoints**; the
+worst hold slack is +0.074 ns, the worst setup slack from +0.019 to
++1.014 ns. In the 1.9.12.03 P1 / R2 build of those sources the other clocks
+reach, against what they need: opl4_clk54 95.2 / 54 MHz, PCM engine 41.5 /
+36 MHz, clkin 53.9 / 27 MHz, cpu_clk 67.4 / 3.58 MHz. That sweep is in
+[MOONSOUND.md](MOONSOUND.md).
 
-The chip is full (96-97 % CLS), so slack moves by about 1 ns from build to
+With the VU meter, worst setup slack (main_clk) and violated setup / hold
+endpoints in every distinct place-and-route combination of 1.9.12.03 (Place
+2 places exactly as Place 1, Place 3 and 4 as Place 0) and in 1.9.11.03
+Education, Place 1 / Route 2:
+
+| Place / Route | X2 (`437b716`) | X3 (`aa2c2eb`) |
+|---|---|---|
+| 0 / 0 (also 3 / 0, 4 / 0) | -0.747 ns, **38** / 0 | -0.156 ns, **11** / 0 |
+| **0 / 1** (also 3 / 1, 4 / 1), project setting (X3) | -0.343 ns, **15** / 0 | **+0.027 ns, 0 / 0** |
+| 0 / 2 | +0.020 ns, 0 / 0 | +0.006 ns, 0 / 0 |
+| 1 / 0 (also 2 / 0) | +0.017 ns, 0 / 0 | -0.098 ns, **8** / 0 |
+| 1 / 1 (also 2 / 1) | +0.212 ns, 0 / 0 | +0.004 ns, 0 / 0 |
+| 1 / 2 (also 2 / 2), X2's setting | +0.088 ns, 0 / 0 | +0.025 ns, 0 / 0 |
+| 1.9.11.03 Education, 1 / 2 | +0.469 ns, 0 / 0 | +0.605 ns, 0 / 0 |
+
+- **X2** (`437b716`, the first build with the meter) fails two of the six
+  1.9.12.03 combinations, Place 0 / Route 1 and Place 0 / Route 0.
+- **X3** (`aa2c2eb`) differs from X2 in one register: the meter's frame-tick
+  synchronizer has one stage more (the frame ends one 54 MHz clock later,
+  nothing visible changes). Of the variants tried it is the only one that
+  closes all four Place 0-1 / Route 1-2 combinations and 1.9.11.03; Route 0
+  fails in both placements. The project is set to **Place 0 / Route 1**, the
+  combination with most margin, and the bitstream X3 is that build.
+- **The margins of X3 are 4 to 27 ps.** That is placement luck, not a fix:
+  the extra register does not touch the failing paths. The variants that did
+  not close everything: the meter on main_clk (its own paths fail, -1.8 ns),
+  the meter on the 36 MHz clock (P0 / R1 -0.758 ns), the meter and screen
+  floorplanned into one of four regions (`GRP_LOC`; two fail P0 / R1, one
+  fails P0 / R2, one fails 1.9.11.03 by -0.394 ns), the extra stage plus a
+  floorplan (P0 / R1 -0.412 ns), and a cheaper meter with four bars and no
+  peak marks (222 logic cells less: closes P0 / R1, fails P1 / R2 by
+  -2.149 ns, 37 endpoints). Less logic does not make the placement steadier
+  at this fill.
+- The paths that fail, and the 25 worst in every build, are New Juice's
+  own: the bus snapshot of `mp_debouncer` (`latched`) through the slot
+  decode to the clock enables and state of `flash_roms`, `linear_rom`,
+  `super_megaram`, `sdram_mapper` and the debugger, and the tone counters of
+  the PSG (`jt49`, `regarray` -> `count`). None of them goes through the
+  meter, its screen or HDMI; the meter shows up only in the hold lists of
+  P1 / R1 and P1 / R2, at +0.208 ns (`vu_st_rom` -> the screen's text ROM,
+  clkin). A register on the output of `mp_debouncer` would give margin
+  back, but that is New Juice's logic and has not been touched.
+
+So check "Numbers of Setup Violated Endpoints" after every rebuild: any
+change, in the meter or anywhere else, can move the placement into a failing
+one.
+
+The chip is full (96-98 % CLS), so slack moves by about 1 ns from build to
 build. After any change, read "Numbers of Setup Violated Endpoints" and
 "Numbers of Hold Violated Endpoints" in `impl/pnr/new-juice_tr_content.html`:
 the summary of the IDE can show no TNS while a clock-domain crossing fails.
@@ -227,7 +271,7 @@ mode); with it on, the debugger terminal, as before:
 
 ![VU meter on HDMI](docs/img/vu_hdmi_nj.png)
 
-*A frame as the HDMI receiver of the board bench took it from the cable (simulation, `tools/sim/board/run_board.sh hdmi`): the FM, playing on the left only, has just been muted, so its bar falls and its peak mark stays.*
+*The first VU frame of the board bench as its HDMI receiver took it from the cable (simulation, `tools/sim/board/run_board.sh hdmi`, X3 sources): FM on the left only, the wave panned 12 dB down on the left, OUT the whole mix. The design sends limited range (16-235); the picture has been converted to full range, as a TV shows it, so its black is not the 16 that goes down the cable.*
 
 - Bars, 28 segments of 1.5 dB (the top one is full scale, the bottom one
   42 dB below), with a peak mark that stays 45 frames: **FM** L/R and
@@ -237,7 +281,7 @@ mode); with it on, the debugger terminal, as before:
 - **YRW801**: `...` while it is copied, `OK`, `NO VALIDA` (copied, but the
   checksum says it is not the YRW801) or `ERROR` (the copy failed).
   **MSX**: `OK` while the slot clock runs.
-- Footer: the build (`X2` and the date, a parameter in `src/top.v`).
+- Footer: the build (`X3` and the date, a parameter in `src/top.v`).
 
 How it is made (MoonTANG's screen and meter, adapted to a full chip):
 `src/moonsound/vu_screen.v` draws each pixel from the coordinates of the
@@ -247,8 +291,12 @@ now parameters, and its two text tables are ROMs in block RAM. The meter,
 does (checked frame by frame on random signals) with about a third of its
 logic. It runs on opl4_clk54; the HDMI samples (main_clk) enter it through
 a register, and its outputs change once per frame, in the vertical blanking,
-so the screen (27 MHz) reads them with no synchronizer. The meter and the
-screen cost 255 + 252 LUTs (and 52 + 10 ALUs), 279 + 89 registers and 3 block RAMs (X2).
+so the screen (27 MHz) reads them with no synchronizer. Its frame-tick
+synchronizer has one stage more than MoonTANG's (X3, see
+[Resources and timing](#resources-and-timing)), so its frames end one
+54 MHz clock later; with that, the bench gets MoonTANG's levels in every
+frame. The meter and the screen cost 255 + 252 LUTs (and 52 + 10 ALUs),
+280 + 89 registers and 3 block RAMs (X3).
 
 The HDMI transmitter and the video PLL are reset with every MSX /RESET, as
 in New Juice: the picture (and HDMI's sound) can drop for a moment, and the
@@ -275,7 +323,8 @@ mapper), with the same ROMs and YRW801 in the flash; only the bitstream at
 | Y1 | `16a9664` | 1.9.12.03, 0 / 1 | `a3d0917f9bdbbd45c683f8746dd00447` | MSX logo, then nothing |
 | Y2 | `16a9664` | 1.9.12.03, 0 / 2 | `ddc6253b09ed2b8a5b723d2e887434ff` | not tried yet |
 | X1 | `16a9664` without bit 7 = the sources of `f3e4a2c` | 1.9.12.03, 1 / 2 | `276425bea832b1272213ce9a55dcfe29` | **boots** |
-| X2 | `437b716` (X1 + the VU meter on HDMI) | 1.9.12.03, 1 / 2 | `81e3e381e6a8b95b9e7c1e295b34bfd9` | not tried yet |
+| X2 | `437b716` (X1 + the VU meter on HDMI) | 1.9.12.03, 1 / 2 | `81e3e381e6a8b95b9e7c1e295b34bfd9` | not tried; replaced by X3 |
+| X3 | `aa2c2eb` (X2 + one synchronizer stage) | 1.9.12.03, 0 / 1 | `33d413bd0bfa3a5ed947df8f0a4c3029` | not tried yet |
 
 - The file first tried as "B3" was New Juice's own bitstream from upstream
   (its header says 1.9.11.03 Education; its MD5 is that of
@@ -328,6 +377,8 @@ wire mismatch. Worst slack, slow corner (typical in brackets), ns:
 | fork | fails | -0.640 (+0.145) | +0.946 | +2.866 | the same | -1.225 |
 | Y1 | fails | **+0.626** (+1.076) | +1.173 | +2.866 | the same | -1.119 |
 | X1 | boots | -0.097 (+0.567) | +1.020 | +2.866 | the same | -0.984 |
+| X2 | not tried | -0.777 (+0.023) | +1.290 | +2.866 | the same | -1.467 |
+| X3 | not tried | +0.548 (+1.045) | +1.367 | +2.866 | the same | -1.176 |
 
 - The read capture (`read_data_reg` of `sdram_command_adapter`) is packed in
   the I/O cells in every build (the report's "I/O Register as FF 66/363"),
@@ -340,6 +391,12 @@ wire mismatch. Worst slack, slow corner (typical in brackets), ns:
   fail**: Y1 has the best write margin and fails; B4 and X1 have worse ones
   and boot. The SDRAM interface is not the cause of the boot failures seen
   so far.
+- X2 and X3, the builds with the VU meter, were measured the same way (X3's
+  build with the SDF gives the same bitstream as the delivered one, header
+  aside). X2 has less write margin than X1, inside the range of builds that
+  boot (B4: -0.883); X3 has more than X1. Their `wv_dout` is in the range of
+  the other builds. If X3 does not boot, placement and this interface are
+  the suspects, in that order.
 
 The SDC is kept out of this branch for now. With it, `f3e4a2c` reports 17
 setup violations (write DQ down to -0.130, `wv_dout` -1.022). Closing them
@@ -407,7 +464,9 @@ make roms                                 # New Juice's Nextor and FM-PAC + SFG-
 make yrw801 YRW801=/path/to/yrw801.rom    # your own YRW801 image to flash 0x200000
 ```
 
-The repository carries a built bitstream, as New Juice does:
+The repository carries a built bitstream, as New Juice does (still X1:
+the sources now build X3, with the VU meter, which is handed out apart and
+replaces X1 here only after it has booted on the MSXBOOK):
 `impl/pnr/new-juice.fs` and `.bin` are this fork's bitstream for the board
 test (X1: Gowin 1.9.12.03, Place 1 / Route 2, sources of `f3e4a2c`; MD5 of
 the `.fs` `276425bea832b1272213ce9a55dcfe29`, of the `.bin`
@@ -430,6 +489,8 @@ MSXBOOK; it replaced the `16a9664` build ("fork" there), which does not.
   bitstream included. A rebuild of the same sources gives a different `.fs`
   (its header carries the build time), and another Gowin version places and
   routes it differently, so check its timing (see above) before committing it.
+  Today it builds X3 (with the VU meter) over X1: do not commit that
+  bitstream until X3 has booted on the board.
 
 `make` needs the Gowin IDE (`GOWIN_IDE=...` or `GW_SH=...`) and the
 programming targets need openFPGALoader, as in New Juice. Without the
@@ -481,7 +542,10 @@ The details are in [MOONSOUND.md](MOONSOUND.md). In short:
   by ear on the board.
 - HDMI (picture and sound) drops with every MSX /RESET, and there is none
   with the MSX off: New Juice resets its video PLL and the transmitter with
-  the MSX. The VU meter (X2) has not been seen on a screen yet.
+  the MSX. The VU meter (X3) has not been seen on a screen yet.
+- Timing closes with a few picoseconds to spare in the build with the VU
+  meter (X3): any rebuild has to be checked, see
+  [Resources and timing](#resources-and-timing).
 
 ## Licenses
 

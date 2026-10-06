@@ -52,8 +52,8 @@ licenses are in [FORK.md](FORK.md).
 
 ## Resources and timing
 
-Resource usage is in [FORK.md](FORK.md#resources-and-timing). Timing was
-measured on this branch with both tool versions and every place-and-route
+Resource usage is in [FORK.md](FORK.md#resources-and-timing). Timing of the
+sources before the VU meter (`16a9664`) was measured with both tool versions and every place-and-route
 option the tools accept for this device (Gowin silently turns Place 3 and 4
 into Place 0 here, and Place 2 gives exactly the same placement as Place 1, so
 the 18 builds below are 10 different implementations, 5 per tool version).
@@ -66,35 +66,44 @@ Worst setup slack (all in main_clk, 108 MHz) and violated endpoints:
 | 0 / 2 | +0.406 ns, 0 / 0 | +0.451 ns, 0 / 0 |
 | 1 / 0 | +0.019 ns, 0 / 0 | +0.300 ns, 0 / 0 |
 | 1 / 1 (also 2 / 1) | +0.202 ns, 0 / 0 | +0.060 ns, 0 / 0 |
-| **1 / 2** (also 2 / 2), project setting | **+0.779 ns, 0 / 0** | +0.578 ns, 0 / 0 |
+| **1 / 2** (also 2 / 2), the project setting then | **+0.779 ns, 0 / 0** | +0.578 ns, 0 / 0 |
 
 Every build closes: 0 setup and 0 hold violated endpoints, worst hold slack
 +0.074 ns, no clock-domain crossing among the 25 worst setup paths. That
 covers only what the SDC constrains: the SDRAM pins are not constrained (as
 in New Juice), so these reports say nothing about them; they were measured
-apart from the SDF (see below). The
-project uses `Place_Option = 1`, `Route_Option = 2`
-(`impl/new-juice_process_config.json`), the best of the sweep with both
-versions. With 1.9.12 P1/R2 the other clocks have, as Fmax against the
+apart from the SDF (see below). Those
+sources were built with `Place_Option = 1`, `Route_Option = 2`
+(`impl/new-juice_process_config.json`), the best of that sweep with both
+versions; with the VU meter the project uses Place 0 / Route 1 (below).
+With 1.9.12 P1/R2 the other clocks have, as Fmax against the
 constraint: opl4_clk54 95.2 / 54 MHz, PCM engine (opl4_clk_eng) 41.5 / 36 MHz,
 clkin (OPM, OPLL, HDMI pixels) 53.9 / 27 MHz, cpu_clk 67.4 / 3.58 MHz.
 
-With the VU meter (build X2, commit `437b716`), 1.9.12.03:
+The table above is the sources of `16a9664`, before the VU meter. With the
+meter, worst setup slack (main_clk) and violated setup / hold endpoints:
 
-| Place / Route | Worst setup slack | Violated setup / hold endpoints |
+| Place / Route | X2 (`437b716`) | X3 (`aa2c2eb`) |
 |---|---|---|
-| 0 / 1 | -0.343 ns | **15** / 0 |
-| 0 / 2 | +0.020 ns | 0 / 0 |
-| 1 / 0 | +0.017 ns | 0 / 0 |
-| 1 / 1 | +0.212 ns | 0 / 0 |
-| **1 / 2**, project setting (X2) | **+0.088 ns** | 0 / 0 |
+| 0 / 0 (also 3 / 0, 4 / 0) | -0.747 ns, **38** / 0 | -0.156 ns, **11** / 0 |
+| **0 / 1** (also 3 / 1, 4 / 1), project setting (X3) | -0.343 ns, **15** / 0 | **+0.027 ns, 0 / 0** |
+| 0 / 2 | +0.020 ns, 0 / 0 | +0.006 ns, 0 / 0 |
+| 1 / 0 (also 2 / 0) | +0.017 ns, 0 / 0 | -0.098 ns, **8** / 0 |
+| 1 / 1 (also 2 / 1) | +0.212 ns, 0 / 0 | +0.004 ns, 0 / 0 |
+| 1 / 2 (also 2 / 2), X2's setting | +0.088 ns, 0 / 0 | +0.025 ns, 0 / 0 |
+| 1.9.11.03 Education, 1 / 2 | +0.469 ns, 0 / 0 | +0.605 ns, 0 / 0 |
 
-and 1.9.11.03 Education, Place 1 / Route 2: +0.469 ns, 0 / 0. Logic 86-87 %,
-CLS 97 %. In every one of them the 25 worst paths are New Juice's own
-(`mp_debouncer` to the memory clients) and none touches the meter, its
-screen or HDMI. A cheaper trial (four bars, no peak marks, 222 logic cells
-less) closed 0 / 1 (+0.104 ns) and failed 1 / 2 (-2.149 ns, 37 endpoints):
-less logic does not mean a steadier placement at this fill.
+X3 is X2 with one more stage in the meter's frame-tick synchronizer; it is
+the only variant tried that closes every Place 0-1 / Route 1-2 combination
+and 1.9.11.03 (the others, and why this is placement luck and not a fix, are
+in [FORK.md](FORK.md#resources-and-timing)). The project is now set to
+Place 0 / Route 1 (+0.027 ns). Logic 86-88 %, CLS 97-98 %. In every build
+the 25 worst setup paths are New Juice's own (`mp_debouncer` through the
+slot decode to `flash_roms`, `linear_rom`, `super_megaram`, `sdram_mapper`
+and the debugger, and the tone counters of `jt49`); none touches the meter,
+its screen or HDMI. Worst hold slack +0.074 ns in all of them. With 1.9.12
+P0 / R1 the other clocks reach: opl4_clk54 80.4 / 54 MHz, PCM engine 44.6 /
+36 MHz, clkin 55.6 / 27 MHz, cpu_clk 55.9 / 3.58 MHz.
 
 The tightest paths are still New Juice's own: from the bus snapshot
 (`mp_debouncer`) through the slot decode to the SDRAM request of the memory
@@ -107,7 +116,8 @@ the IDE can show no TNS while a clock-domain crossing fails.
 
 ## SDRAM interface timing
 
-Measured on the eight builds tried on the board, from their post-PnR SDF
+Measured on the eight builds tried on the board and on the two with the VU
+meter (X2, X3), from their post-PnR SDF
 (the method, the table and the proposed SDC are in
 [FORK.md](FORK.md#the-sdram-interface)). In short:
 
@@ -120,7 +130,8 @@ Measured on the eight builds tried on the board, from their post-PnR SDF
   (`dq_out` feeds two pins per bit) and move with the placement: from
   -1.624 to +0.626 ns in the slow corner. The arbiter's own capture of the
   pins (`wv_dout`, OPL4 wave reads only) is negative in every build, -0.98
-  to -1.47 ns, slow corner.
+  to -1.47 ns, slow corner. X3, with the VU meter: write data +0.548 ns,
+  address +1.367, `wv_dout` -1.176 (X2: -0.777, +1.290, -1.467).
 - None of these numbers separates the builds that boot from those that
   fail, so the SDRAM interface is not the cause of the MSXBOOK boot
   failures. The arbiter could still take a wrong wave word in a slow
@@ -143,13 +154,14 @@ Results on this branch (WSL Ubuntu-24.04, Icarus 12, sv2v):
 | New Juice's OPLL without sv2v (`opll`) | PASS (+-4085) |
 | Whole board (`board/run_board.sh`) | 68/68 PASS: boot with New Juice's start-up test and ROM copy through the arbiter, YRW801 copy (synthetic 4 KB) and checksum, FM status/register read-back/timer /INT, wave ID and memory through 7Eh/7Fh with /WAIT, wave RAM at SDRAM 0x700000, nothing above 1 MB, 2 MB mapper, Super-MegaRAM, Nextor ROM, LINEAR mode, OPLL writes, PCM and FM to the I2S amplifier at 48.2 kHz decoded as I2S with both halves of every frame equal and every word exactly the mix sample, the mono mix saturating at 7FFFh/8000h, the OPL4 releasing the bus at the same time as New Juice's own ports (10 ns after the design's /RD, both), YRW801 kept across an MSX /RESET, no illegal SDRAM command, no decayed row |
 | Whole board, flash without YRW801 (`run_board.sh blank`) | 12/12 PASS: the checksum flags the image and the LED flashes |
-| Whole board with HDMI (`run_board.sh hdmi`, two simulations, about 36 minutes) | 4/4 PASS (32/32 checks): New Juice starts the video PLL after the MSX /RESET; through the verification receiver, 1036800 of 1036800 pixels are the ones sent; the two VU frames are, pixel for pixel, `vu_check.py`'s picture (FM 17/0, wave 24/24, out 25/24 segments; then, with the FM muted, its bar down to 16 and its peak mark held at 17), and those levels are the ones an independent model of the meter gives from each bar's own source; the debugger frame is its terminal, pixel for pixel (10318 white pixels, nothing of the meter); 2880 audio samples equal to the transmitted ones, left and right apart; 720x480p geometry, ACR (N 6272, CTS 29988), channel status (44.1 kHz, 16 bits), AVI (VIC 2), Audio InfoFrame, no protocol error. Negative control (FM R bar fed from wave R): fails, on the meter check alone |
-| VU meter (`vu/run_vu.sh`) | 5/5 PASS: `vu_meter_nj` gives MoonTANG's `vu_meter` levels and peak marks in 1400 of 1400 random frames (and a HOLD 44 mutant fails); the screen with the fork's texts, through `hdmi.sv`, is pixel for pixel `vu_check.py`'s picture (and a level one segment off is rejected). With `VG=` the X2 netlist: its three block-RAM ROMs hold what the simulation holds (512 + 128 + 512 entries, and a flipped bit is caught); with `GL=` a 1.9.12.03 synthesis netlist of the screen alone (`vu/syn/run_syn.sh`) draws the same frame, pixel for pixel: 9/9 PASS |
+| Whole board with HDMI (`run_board.sh hdmi`, three simulations, about 36 minutes) | 5/5 PASS (32/32 checks): New Juice starts the video PLL after the MSX /RESET; through the verification receiver, 1036800 of 1036800 pixels are the ones sent; the two VU frames are, pixel for pixel, `vu_check.py`'s picture (FM 17/0, wave 16/24 with the wave panned 12 dB down on the left, out 20/24 segments), and the levels and peak marks drawn are the ones an independent model of the meter gives from each bar's own source, in both frames; with the FM muted near the end of the first frame, the model and the meter agree in the second that the FM L bar goes down to 16 and OUT L to 19 with their peak marks held at 17 and 20 (on the screen the two frames are the same picture: each bar's top segment is under its own peak mark); the debugger frame is its terminal, pixel for pixel (10318 white pixels, nothing of the meter); 2880 audio samples equal to the transmitted ones, left and right apart; 720x480p geometry, ACR (N 6272, CTS 29988), channel status (44.1 kHz, 16 bits), AVI (VIC 2), Audio InfoFrame, no protocol error. Negative controls: the FM R bar fed from wave R, and the wave L and wave R bars swapped, each fail on the meter check alone; `vu_check.py` rejects a level one segment off |
+| VU meter (`vu/run_vu.sh`) | 13/13 PASS: `vu_meter_nj` gives MoonTANG's `vu_meter` levels and peak marks in 1400 of 1400 random frames, with the reference's frame toggle one clock late for the fork's extra synchronizer stage (and a HOLD 44 mutant fails); the screen with the fork's texts, through `hdmi.sv`, is pixel for pixel `vu_check.py`'s picture (and a level one segment off is rejected), with YRW801 OK and MSX OK and also with YRW801 `...`, `ERROR`, `NO VALIDA` and MSX `--`. With `VG=` the X3 netlist: its three block-RAM ROMs hold what the simulation holds (512 + 128 + 512 entries, and a flipped bit is caught); with `GL=` a 1.9.12.03 synthesis netlist of the screen alone (`vu/syn/run_syn.sh`) draws the same frame, pixel for pixel (and with no netlist both netlist checks fail) |
 
 ## Known limits
 
-- On the board only the boot has been tried, on one MSXBOOK: the build of
-  `f3e4a2c` boots, the versioned bitstream (`16a9664`) does not; see
+- On the board only the boot has been tried, on one MSXBOOK: the versioned
+  bitstream (X1, sources of `f3e4a2c`) boots, the build of `16a9664` does
+  not; X3, with the VU meter, has not been tried; see
   [FORK.md](FORK.md#board-results). Everything else above comes from
   simulation and from the Gowin reports.
 - Franky is gone: SMS games and the sound scope no longer work. The mapper is
@@ -175,6 +187,8 @@ Results on this branch (WSL Ubuntu-24.04, Icarus 12, sv2v):
   resets its video PLL and the transmitter with the MSX (unchanged). The VU
   meter has been simulated with the whole design and an HDMI receiver, not
   seen on a screen yet.
+- The build with the VU meter (X3) closes timing by 4 to 27 ps with
+  1.9.12.03; any rebuild has to be checked.
 - Unchanged New Juice behaviour, seen in the bench: with the MSX off (all
   slot lines at 0) New Juice holds /WAIT and turns the data transceiver
   towards the slot, although it drives nothing.
