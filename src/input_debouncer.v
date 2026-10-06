@@ -1,6 +1,10 @@
 module input_debouncer
 #(
-    parameter int WIDTH = 1
+    parameter int WIDTH = 1,
+    // New Juice MoonSound fork (timing): 1 adds one register stage on the
+    // output, to keep these signals aligned with mp_debouncer's snapshot
+    // when that one has its OUTPUT_STAGE; 0 is New Juice's original.
+    parameter int OUTPUT_STAGE = 0
 )
 (
     input clk,
@@ -40,6 +44,22 @@ module input_debouncer
         end
     end
 
-    assign out = latched;
+    generate
+        if (OUTPUT_STAGE != 0) begin : output_stage_impl
+            reg [WIDTH-1:0] latched_out = {WIDTH{1'b1}};
+
+            always_ff @(posedge clk or negedge reset_n)
+            begin
+                if (!reset_n)
+                    latched_out <= {WIDTH{1'b1}};
+                else
+                    latched_out <= latched;
+            end
+
+            assign out = latched_out;
+        end else begin : no_output_stage_impl
+            assign out = latched;
+        end
+    endgenerate
 
 endmodule

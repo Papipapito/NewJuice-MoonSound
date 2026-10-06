@@ -1,4 +1,10 @@
 module mp_debouncer
+#(
+    // New Juice MoonSound fork (timing): 1 adds one register stage after the
+    // published snapshot (every output one main clock later); 0 is New
+    // Juice's original behaviour. See the output stage below.
+    parameter int OUTPUT_STAGE = 0
+)
 (
     input clk,
     input reset_n,
@@ -119,18 +125,53 @@ module mp_debouncer
         end
     end
 
+    // New Juice MoonSound fork (timing): with OUTPUT_STAGE = 1 the snapshot
+    // and its valid pulse leave through one more register. Their D inputs
+    // are plain copies, so the placer can put these registers next to the
+    // slot decode of the memory clients instead of next to the scan logic
+    // and the mp pins, where `latched` has to stay. Everything comes out
+    // exactly one main clock later; top.v delays every other bus input
+    // that is used together with it (input_debouncer outputs, the fast
+    // /RD and /WR synchronizers, the synchronized CPU clock) by the same
+    // clock, so the bus logic sees the same relative timing as before.
+    wire [23:0] snapshot;
+    wire snapshot_valid;
+    generate
+        if (OUTPUT_STAGE != 0) begin : output_stage_impl
+            reg [23:0] latched_out = 24'hffffff;
+            reg inputs_latched_out = 1'b0;
+
+            always_ff @(posedge clk or negedge reset_n)
+            begin
+                if (!reset_n) begin
+                    latched_out <= 24'hffffff;
+                    inputs_latched_out <= 1'b0;
+                end else begin
+                    latched_out <= latched;
+                    inputs_latched_out <= inputs_latched_reg;
+                end
+            end
+
+            assign snapshot = latched_out;
+            assign snapshot_valid = inputs_latched_out;
+        end else begin : no_output_stage_impl
+            assign snapshot = latched;
+            assign snapshot_valid = inputs_latched_reg;
+        end
+    endgenerate
+
     assign msel_n = msel_reg;
-    assign a_lo = latched[MP_A_LO +: 8];
-    assign a_hi = latched[MP_A_HI +: 8];
+    assign a_lo = snapshot[MP_A_LO +: 8];
+    assign a_hi = snapshot[MP_A_HI +: 8];
     assign addr = {a_hi, a_lo};
-    assign merq_n = latched[MP_MERQ_N];
-    assign iorq_n = latched[MP_IORQ_N];
-    assign cs1_n = latched[MP_CS1_N];
-    assign cs2_n = latched[MP_CS2_N];
-    assign reset_in_n = latched[MP_RESET_IN_N];
-    assign rfsh_n = latched[MP_RFSH_N];
-    assign cs12_n = latched[MP_CS12_N];
-    assign m1_n = latched[MP_M1_N];
-    assign inputs_latched = inputs_latched_reg;
+    assign merq_n = snapshot[MP_MERQ_N];
+    assign iorq_n = snapshot[MP_IORQ_N];
+    assign cs1_n = snapshot[MP_CS1_N];
+    assign cs2_n = snapshot[MP_CS2_N];
+    assign reset_in_n = snapshot[MP_RESET_IN_N];
+    assign rfsh_n = snapshot[MP_RFSH_N];
+    assign cs12_n = snapshot[MP_CS12_N];
+    assign m1_n = snapshot[MP_M1_N];
+    assign inputs_latched = snapshot_valid;
 
 endmodule

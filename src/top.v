@@ -465,10 +465,24 @@ module top
     wire rd_n;
     wire wr_n;
     wire sltsl_n;
-    (* ASYNC_REG = "TRUE" *) reg [1:0] smr_rd_n_sync = 2'b11;
-    (* ASYNC_REG = "TRUE" *) reg [1:0] smr_wr_n_sync = 2'b11;
-    wire smr_rd_n_fast = smr_rd_n_sync[1];
-    wire smr_wr_n_fast = smr_wr_n_sync[1];
+    // New Juice MoonSound fork (timing): 1 = every bus input of the 108 MHz
+    // domain goes through one more register stage: the mp_debouncer
+    // snapshot (whose paths into the memory clients' SDRAM requests limit
+    // main_clk), the input_debouncer outputs (/RD, /WR, /SLTSL, data), the
+    // fast /RD and /WR synchronizers and the synchronized CPU clock, all
+    // by exactly one main clock, so that their relative timing is New
+    // Juice's. Everything the cartridge puts on the slot (data, BUSDIR,
+    // DATADIR, /WAIT) then comes one main clock (9.26 ns) later. Not
+    // delayed: the raw /SLTSL and /RD that the SDRAM arbiter takes as an
+    // early hint (it only gets earlier relative to New Juice's request),
+    // the slot clock of IKASCC (a clock) and the MoonSound's clock-alive
+    // detector. 0 = New Juice's original timing.
+    localparam integer BUS_INPUT_STAGE = 1;
+
+    (* ASYNC_REG = "TRUE" *) reg [2:0] smr_rd_n_sync = 3'b111;
+    (* ASYNC_REG = "TRUE" *) reg [2:0] smr_wr_n_sync = 3'b111;
+    wire smr_rd_n_fast = smr_rd_n_sync[1 + BUS_INPUT_STAGE];
+    wire smr_wr_n_fast = smr_wr_n_sync[1 + BUS_INPUT_STAGE];
     wire [7:0] slot_expander_data_out;
     wire slot_expander_data_out_en;
     wire [7:0] data_out;
@@ -541,11 +555,11 @@ module top
     always_ff @(posedge main_clk or negedge board_reset_n)
     begin
         if (!board_reset_n) begin
-            smr_rd_n_sync <= 2'b11;
-            smr_wr_n_sync <= 2'b11;
+            smr_rd_n_sync <= 3'b111;
+            smr_wr_n_sync <= 3'b111;
         end else begin
-            smr_rd_n_sync <= {smr_rd_n_sync[0], rd_n_in};
-            smr_wr_n_sync <= {smr_wr_n_sync[0], wr_n_in};
+            smr_rd_n_sync <= {smr_rd_n_sync[1:0], rd_n_in};
+            smr_wr_n_sync <= {smr_wr_n_sync[1:0], wr_n_in};
         end
     end
     wire sdrc_cmd_ack;
@@ -1248,7 +1262,8 @@ module top
     
     input_debouncer
     #(
-        .WIDTH(3)
+        .WIDTH(3),
+        .OUTPUT_STAGE(BUS_INPUT_STAGE)
     )
     bus_data_debouncer(
         .clk(main_clk),
@@ -1259,7 +1274,8 @@ module top
 
     input_debouncer
     #(
-        .WIDTH(8)
+        .WIDTH(8),
+        .OUTPUT_STAGE(BUS_INPUT_STAGE)
     )
     bus_control_debouncer(
         .clk(main_clk),
@@ -1268,7 +1284,9 @@ module top
         .out(cd_in)
     );
 
-    mp_debouncer mp_debouncer_inst(
+    mp_debouncer #(
+        .OUTPUT_STAGE(BUS_INPUT_STAGE)
+    ) mp_debouncer_inst(
         .clk(main_clk),
         .reset_n(board_reset_n),
         .mp(mp),
@@ -1446,7 +1464,7 @@ module top
 
     sdram_mapper sdram_mapper_inst(
         .clk(main_clk),
-        .cpu_clk_high(psg_cpu_clk_sync[1]),
+        .cpu_clk_high(psg_cpu_clk_sync[1 + BUS_INPUT_STAGE]),
         .reset_n(memory_mapper_reset_n),
         .addr(addr),
         .data_in(cd_in),
@@ -1561,7 +1579,9 @@ module top
         // Startup order: SDRAM test, SD controller, then the staged
         // CPU-visible modules beginning with the slot expander.
         .reset_n(sd_module_reset_n),
-        .cpu_clk(cpu_clk),
+        // its own two-register synchronizer follows: one stage more with
+        // BUS_INPUT_STAGE (MoonSound fork)
+        .cpu_clk(BUS_INPUT_STAGE ? psg_cpu_clk_sync[0] : cpu_clk),
         .addr(addr),
         .data_in(cd_in),
         .merq_n(merq_n),
