@@ -1,10 +1,13 @@
 #!/bin/bash
 # Whole-design bench of the New Juice MoonSound fork on the WonderTANG model.
 # WSL Ubuntu-24.04 with Icarus 12 and sv2v.
-# Usage: bash tools/sim/board/run_board.sh [main|blank|all]
+# Usage: bash tools/sim/board/run_board.sh [main|blank|all|hdmi]
 #   main (default)  boot, MoonSound, mapper, MegaRAM, ROM, OPLL, audio, timing (~40 min)
 #   blank           the flash has no YRW801: the checksum must flag it (and the LED)
 #   all             both at once (two cores)
+#   hdmi            the video PLL runs: VU meter and debugger picture and HDMI audio
+#                   through a verification receiver (hdmi_nj.vh), and its negative
+#                   control (two cores, about 75 ms of board time each)
 set -e
 cd "$(dirname "$0")"
 R=$(cd ../../.. && pwd)
@@ -15,7 +18,7 @@ command -v "$SV2V" >/dev/null || { echo "sv2v not found: put it in PATH or set S
 MODE=${1:-main}
 mkdir -p build
 # nothing from an earlier run is reused: a failed step stops the bench
-rm -f build/nj_sv2v.v build/nj_pins.v build/sd_reader.sv
+rm -f build/nj_sv2v.v build/nj_sv2v_neg.v build/nj_pins.v build/sd_reader.sv
 
 # ---- 1. the design as listed in new-juice.gprj, converted to plain Verilog ----
 FILES=$(grep -o 'path="[^"]*"' "$R/new-juice.gprj" | sed 's/path="//;s/"//' | grep -E '\.(v|sv)$')
@@ -30,12 +33,13 @@ done
 (cd "$R" && "$SV2V" -DMODEL_TECH -DSIMULATION -I src $LIST -w "$OLDPWD/build/nj_sv2v.v")
 
 # ---- 2. simulation shortcuts (the RTL is not touched; every pattern must match once) ----
-patch() {   # patch <old> <new>
-    local n; n=$(grep -c -F -- "$1" build/nj_sv2v.v || true)
-    [ "$n" = 1 ] || { echo "patch: '$1' found $n times"; exit 1; }
-    python3 - "$1" "$2" <<'EOF'
+patch() {   # patch <old> <new> [file]
+    local f=${3:-build/nj_sv2v.v} n
+    n=$(grep -c -F -- "$1" "$f" || true)
+    [ "$n" = 1 ] || { echo "patch: '$1' found $n times in $f"; exit 1; }
+    python3 - "$1" "$2" "$f" <<'EOF'
 import sys
-p = 'build/nj_sv2v.v'
+p = sys.argv[3]
 t = open(p, encoding='utf-8').read()
 open(p, 'w', encoding='utf-8').write(t.replace(sys.argv[1], sys.argv[2], 1))
 EOF
@@ -51,12 +55,12 @@ python3 gen_pins_nj.py "$R/src/top.v" "$R/src/top.cst" build/nj_pins.v
 # ---- 4. compile and run ----
 # The old .vvp and .log are removed first and a compile error stops the
 # bench, so an older simulation can never run and pass in its place.
-comp() {   # comp <name> [iverilog options]
+comp() {   # comp <name> [iverilog options]   (NETLIST, EXTRA: from the environment)
     local name=$1 rc=0; shift
     rm -f build/$name.vvp build/$name.log
     iverilog -g2012 -I . -s tb_nj_board "$@" -o build/$name.vvp \
         tb_nj_board.v wt20x_board.v ../common/sdram_model.v ../common/spi_flash_model.v \
-        build/nj_pins.v build/nj_sv2v.v "$GW" > build/$name.comp 2>&1 || rc=$?
+        ${EXTRA:-} build/nj_pins.v ${NETLIST:-build/nj_sv2v.v} "$GW" > build/$name.comp 2>&1 || rc=$?
     grep -v 'Pruning\|expects 1 bits\|timescale\|Static variable' build/$name.comp || true
     if [ $rc != 0 ] || [ ! -s build/$name.vvp ]; then
         rm -f build/$name.vvp
@@ -80,5 +84,37 @@ case "$MODE" in
     all)   comp main; comp blank -Ptb_nj_board.BLANK=1
            run main & run blank & wait
            show main; show blank; verdict main blank ;;
+    hdmi)
+        # Negative control: the FM R bar is fed from the wave R signal. The
+        # meter model (fed from each bar's own source) must then disagree,
+        # and that must be the only failing check.
+        cp build/nj_sv2v.v build/nj_sv2v_neg.v
+        patch "opl4_vu_wave_r, opl4_vu_wave_l, opl4_vu_fm_r, opl4_vu_fm_l" \
+              "opl4_vu_wave_r, opl4_vu_wave_l, opl4_vu_wave_r, opl4_vu_fm_l" build/nj_sv2v_neg.v
+        rm -rf build/hdmi_*.ppm build/hdmi*_frames*.txt build/png build/png_bad
+        EXTRA=../common/hdmi_rx_check.v comp hdmi -DWITH_HDMI -DHDMI_TAG=\"hdmi\"
+        EXTRA=../common/hdmi_rx_check.v NETLIST=build/nj_sv2v_neg.v comp hdmi_neg -DWITH_HDMI -DHDMI_TAG=\"hdmi_neg\"
+        run hdmi & run hdmi_neg & wait
+        show hdmi
+        echo "################ vu_check.py: the VU frames on the cable against the model ################"
+        FOOT=$(sed -n 's/^ *"\(NEW JUICE MOONSOUND[^"]*\)";.*/\1/p' "$R/src/top.v")
+        VU="python3 ../vu/vu_check.py build"
+        $VU build/png "$R/src/moonsound/font8x8.v" --list hdmi_frames.txt \
+            --title "NEW JUICE" --sub "+ MOONSOUND OPL4" --foot "$FOOT" | tee build/hdmi_check.log || true
+        # the checker itself must see a one-segment error in one bar
+        awk '{ if (NF == 15) $2 = ($2 + 1) % 29; print }' build/hdmi_frames.txt > build/hdmi_frames_bad.txt
+        $VU build/png_bad "$R/src/moonsound/font8x8.v" --list hdmi_frames_bad.txt \
+            --title "NEW JUICE" --sub "+ MOONSOUND OPL4" --foot "$FOOT" > build/hdmi_check_bad.log 2>&1 || true
+        echo "################ negative control: FM R bar fed from wave R ################"
+        grep -a "FAIL\]\|RESULTADO\|(vumetro)\|modelo del medidor" build/hdmi_neg.log | tail -12
+        n=0; npass=0; failed=""
+        n=$((n+1)); if grep -a -q "RESULTADO: PASS" build/hdmi.log; then npass=$((npass+1)); else failed="$failed hdmi"; fi
+        n=$((n+1)); if grep -q "^MODELO: 2 cuadros .*PASS" build/hdmi_check.log; then npass=$((npass+1)); else failed="$failed vu_check"; fi
+        n=$((n+1)); if grep -q "^MODELO: .*FAIL" build/hdmi_check_bad.log; then npass=$((npass+1)); else failed="$failed vu_check_neg"; fi
+        n=$((n+1)); if grep -a -q "RESULTADO: FAIL" build/hdmi_neg.log && grep -a -q "FAIL\] vumetro: las barras" build/hdmi_neg.log \
+                       && [ "$(grep -a -c 'FAIL\]' build/hdmi_neg.log)" = 1 ]; then npass=$((npass+1)); else failed="$failed hdmi_neg"; fi
+        echo "run_board: $npass/$n PASS${failed:+ (failed:$failed)}"
+        echo "  (hdmi bench; vu_check of its frames; vu_check of a wrong level must FAIL; negative control must FAIL, on the meter check only)"
+        [ "$npass" = "$n" ] ;;
     *)     echo "unknown mode: $MODE"; exit 2 ;;
 esac

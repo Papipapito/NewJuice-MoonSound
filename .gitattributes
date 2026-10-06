@@ -3,3 +3,6 @@
 # checksum as the delivered file
 *.fs -text
 *.bin binary
+# Benches run in WSL from a Windows checkout: shell and Python scripts keep LF
+*.sh text eol=lf
+*.py text eol=lf

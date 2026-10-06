@@ -16,7 +16,8 @@
 // untouched): the automatic S1 pulse comes after 2000 clocks instead of 250 ms,
 // the SDRAM start-up test covers 256 words instead of 64K, New Juice copies
 // 2 KB of ROM instead of 160 KB, the YRW801 is 4 KB, and the video PLL is held
-// in reset (HDMI is not exercised here).
+// in reset (HDMI is not exercised here), except in the HDMI mode (WITH_HDMI,
+// hdmi_nj.vh), which boots, plays the OPL4 and checks the HDMI output.
 // ============================================================================
 `timescale 1ns/1ps
 
@@ -96,8 +97,11 @@ module tb_nj_board;
         .led(led), .cart_drives_d(cart_drives_d)
     );
 
-    // HDMI is not exercised: keep the video PLL in reset
+`ifndef WITH_HDMI
+    // HDMI is not exercised here: keep the video PLL in reset
+    // (run_board.sh hdmi compiles with WITH_HDMI: see hdmi_nj.vh)
     initial force fpga.u_top.rpll_video_inst.reset = 1'b1;
+`endif
 
     // ------------------------------------------------------------------
     //  Scoring
@@ -431,6 +435,10 @@ module tb_nj_board;
     reg      int_seen;
     reg [8*12-1:0] sname;
 
+`ifdef WITH_HDMI
+`include "hdmi_nj.vh"
+`endif
+
     initial begin
         audio_clear;
         // ---- fake YRW801 at flash 0x200000 (4 KB used) ----
@@ -516,6 +524,11 @@ module tb_nj_board;
         #100_000;
         ok(fpga.u_top.cpu_modules_ready_reg === 1'b1, "New Juice suelta sus modulos (MSX vivo)");
         ok(fpga.u_top.moonsound_inst.ck_alive === 1'b1, "el MoonSound ve el reloj del slot");
+`ifdef WITH_HDMI
+        // HDMI mode: the picture and the audio on HDMI, then stop
+        hdmi_test;
+        fin;
+`endif
 
         // ==============================================================
         $display("== C. FM (C4h-C7h): estado, relectura de registros, deteccion ==");
