@@ -11,7 +11,10 @@
 //
 // vu_meter_nj runs one clock behind its inputs (its input register) and
 // spreads the frame change over NCH clocks, so the outputs are compared once
-// they have settled: 16 clocks after each frame tick. They must be equal in
+// they have settled: 16 clocks after each frame tick. Its frame-tick
+// synchronizer has one stage more than vu_meter.v's, so vu_meter.v gets
+// frame_tog one clock later (frame_tog_ref): with that, the frames of both
+// end on the same sample. They must be equal in
 // every frame. With -DMUTANT=1 the bench uses HOLD = 44 in vu_meter_nj and
 // must FAIL (negative control).
 // ============================================================================
@@ -33,8 +36,11 @@ module tb_vu_meter_eq;
     reg  [NCH*16-1:0] samples   = {NCH*16{1'b0}};
     wire [NCH*5-1:0]  lv_ref, pk_ref, lv_nj, pk_nj;
 
+    reg frame_tog_ref = 1'b0;
+    always @(posedge clk) frame_tog_ref <= frame_tog;
+
     vu_meter #(.NCH(NCH), .HOLD(45)) u_ref (
-        .clk(clk), .frame_tog(frame_tog), .samples(samples), .level(lv_ref), .peak(pk_ref));
+        .clk(clk), .frame_tog(frame_tog_ref), .samples(samples), .level(lv_ref), .peak(pk_ref));
     vu_meter_nj #(.NCH(NCH), .HOLD(HOLD_NJ)) u_nj (
         .clk(clk), .frame_tog(frame_tog), .samples(samples), .level(lv_nj), .peak(pk_nj));
 

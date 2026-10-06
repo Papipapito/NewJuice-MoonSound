@@ -3,8 +3,9 @@
 // Copyright (c) 2026 Albert "Papipapito", with Claude. GPL-3.0 (see NOTICE.md).
 //
 // Does exactly what MoonTANG's vu_meter.v does (the same outputs, frame for
-// frame, a few clocks later), with much less logic, because the New Juice
-// chip is full:
+// frame, a few clocks later, with each frame ending one clock later; see the
+// end of this header), with much less logic, because the New Juice chip is
+// full:
 //
 //   For each signal (16-bit signed, `clk` domain) it keeps the peak of |x|
 //   over a video frame and, at the frame change, turns it into bar segments
@@ -34,9 +35,15 @@
 //     its inputs, frame tick included, so nothing else changes.
 //
 // `frame_tog` toggles once per frame in the pixel clock domain and is
-// synchronized here (`tick` is the same signal as in vu_meter.v). The outputs
-// only change right after it, at the start of the vertical blanking, so the
-// screen generator can read them with no further crossing.
+// synchronized here, with one stage more than vu_meter.v: `tick` comes one
+// clock later than there, so the frame ends one clock later, which is all
+// that differs (the bench feeds vu_meter.v frame_tog one clock late and
+// gets the same outputs). In New Juice that stage is kept because the build
+// closes timing in every placement option with it (X3), which it did not
+// without it (X2); it is placement luck, not a fix of the tight paths, which
+// are New Juice's own. The outputs only change right after the tick, at the
+// start of the vertical blanking, so the screen generator can read them with
+// no further crossing.
 // ============================================================================
 `default_nettype none
 
@@ -77,10 +84,11 @@ module vu_meter_nj #(
         end
     endfunction
 
-    // the frame tick, as in vu_meter.v, and one clock later for the inputs
-    reg [2:0] ft = 3'b000;
-    always @(posedge clk) ft <= {ft[1:0], frame_tog};
-    wire tick = ft[2] ^ ft[1];
+    // the frame tick (one synchronizer stage more than vu_meter.v), and one
+    // clock later for the inputs
+    reg [3:0] ft = 4'b0000;
+    always @(posedge clk) ft <= {ft[2:0], frame_tog};
+    wire tick = ft[3] ^ ft[2];
     reg  tick_q = 1'b0;
     always @(posedge clk) tick_q <= tick;
 
