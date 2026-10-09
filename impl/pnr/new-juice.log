@@ -1,7 +1,7 @@
-Reading netlist file: "/Users/felipe/src/fpga/new-juice/impl/gwsynthesis/new-juice.vg"
-Parsing netlist file "/Users/felipe/src/fpga/new-juice/impl/gwsynthesis/new-juice.vg" completed
+Reading netlist file: "C:\Users\alber\proyectosAI\msx\NewJuice-MoonSound\impl\gwsynthesis\new-juice.vg"
+Parsing netlist file "C:\Users\alber\proyectosAI\msx\NewJuice-MoonSound\impl\gwsynthesis\new-juice.vg" completed
 Processing netlist completed
-Reading constraint file: "/Users/felipe/src/fpga/new-juice/src/top.cst"
+Reading constraint file: "C:\Users\alber\proyectosAI\msx\NewJuice-MoonSound\src\top.cst"
 Physical Constraint parsed completed
 Running placement......
 [10%] Placement Phase 0 completed
@@ -22,10 +22,10 @@ Bitstream generation in progress......
 Bitstream generation completed
 Running power analysis......
 [100%] Power analysis completed
-Generate file "/Users/felipe/src/fpga/new-juice/impl/pnr/new-juice.power.html" completed
-Generate file "/Users/felipe/src/fpga/new-juice/impl/pnr/new-juice.pin.html" completed
-Generate file "/Users/felipe/src/fpga/new-juice/impl/pnr/new-juice.rpt.html" completed
-Generate file "/Users/felipe/src/fpga/new-juice/impl/pnr/new-juice.rpt.txt" completed
-Generate file "/Users/felipe/src/fpga/new-juice/impl/pnr/new-juice.tr.html" completed
-Mon Aug 24 23:14:47 2026
+Generate file "C:\Users\alber\proyectosAI\msx\NewJuice-MoonSound\impl\pnr\new-juice.power.html" completed
+Generate file "C:\Users\alber\proyectosAI\msx\NewJuice-MoonSound\impl\pnr\new-juice.pin.html" completed
+Generate file "C:\Users\alber\proyectosAI\msx\NewJuice-MoonSound\impl\pnr\new-juice.rpt.html" completed
+Generate file "C:\Users\alber\proyectosAI\msx\NewJuice-MoonSound\impl\pnr\new-juice.rpt.txt" completed
+Generate file "C:\Users\alber\proyectosAI\msx\NewJuice-MoonSound\impl\pnr\new-juice.tr.html" completed
+Thu Oct  8 08:34:13 2026
 

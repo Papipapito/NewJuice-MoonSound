@@ -30,14 +30,11 @@ SFG-01, the debugger, HDMI, and the OPL4 level in the mix, by ear.
 HDMI (6 Oct 2026): X1 shows a black picture unless the debugger is on (the
 sound scope left with Franky). The sources now show a **VU meter** there:
 the OPL4 FM and wave, left and right, what HDMI plays, left and right, the
-YRW801 state and whether the MSX clock runs. Built as **X3** (Gowin
-1.9.12.03, Place 0 / Route 1, 0 / 0 violated endpoints, worst setup slack
-+0.027 ns; it closes in all four Place 0-1 / Route 1-2 combinations and with
-1.9.11.03 Education, by 4 to 27 ps with 1.9.12) and simulated with the whole
-design and an HDMI receiver; not seen on a screen yet. **The versioned
-bitstream, `impl/pnr/new-juice.fs`, is still X1**, without the meter, and
-stays X1 until X3 has been tried on the MSXBOOK; X3 is handed out apart, not
-in git. See [The VU meter on HDMI](#the-vu-meter-on-hdmi).
+YRW801 state and whether the MSX clock runs. The v1.0 FPGA image was built on
+8 Oct 2026 with Gowin 1.9.12.03 and has 0 setup / 0 hold violated endpoints
+(worst reported main-clock slack +0.008 ns). It has passed the simulation
+benches, but its HDMI/VU output has not yet been checked on a display; treat
+the release as experimental. See [The VU meter on HDMI](#the-vu-meter-on-hdmi).
 
 A register stage on New Juice's bus inputs, meant to give timing margin back
 (X4, 6 Oct 2026), was built and reverted: it did not improve the timing and
@@ -47,9 +44,11 @@ cost one clock at the slot. See
 ## Why this repository is private
 
 New Juice has no license, so all its rights stay with its author and a fork
-of it cannot be published without his permission. This repository is
-therefore private and nothing built from it is distributed. Once the fork
-works on a board, lfantoniosi will be told about it, and he decides:
+of it cannot be published without his permission. This repository therefore
+remains private. Release assets are made available only through this private
+repository, at the repository owner's request; this is not permission to
+publish the fork publicly. Once the fork works on a board, lfantoniosi will
+be told about it, and he decides:
 
 - to take the MoonSound into New Juice, whole or in part; or
 - to give a license, or a permission, under which this fork can be published;
@@ -541,20 +540,17 @@ make roms                                 # New Juice's Nextor and FM-PAC + SFG-
 make yrw801 YRW801=/path/to/yrw801.rom    # your own YRW801 image to flash 0x200000
 ```
 
-The repository carries a built bitstream, as New Juice does (still X1:
-the sources now build X3, with the VU meter, which is handed out apart and
-replaces X1 here only after it has booted on the MSXBOOK):
-`impl/pnr/new-juice.fs` and `.bin` are this fork's bitstream for the board
-test (X1: Gowin 1.9.12.03, Place 1 / Route 2, sources of `f3e4a2c`; MD5 of
-the `.fs` `276425bea832b1272213ce9a55dcfe29`, of the `.bin`
-`f2fc3ffd2d2d64d757edfa589ada2862`; 0 / 0 violated endpoints, worst setup
-+0.832 ns). `.gitattributes` keeps both
-byte for byte, so a checkout gives exactly those checksums. The other files
-under `impl/` (reports, synthesis netlist) are still New Juice's from
-upstream until the next build overwrites them.
+The repository carries the built v1.0 bitstream, as New Juice does:
+`impl/pnr/new-juice.fs` and `.bin`. The release uses the same outputs under
+the unambiguous names `NewJuice-MoonSound-v1.0.fs` and
+`NewJuice-MoonSound-v1.0.bin`; use the former in Gowin Programmer. The build
+was made with Gowin 1.9.12.03 on 8 Oct 2026 and reports 0 setup / 0 hold
+violated endpoints (worst main-clock slack +0.008 ns). `.gitattributes` keeps
+both byte for byte, so a checkout reproduces their checksums.
 
-It is X1 in [Board results](#board-results), the build that boots on the
-MSXBOOK; it replaced the `16a9664` build ("fork" there), which does not.
+The older X1 build in [Board results](#board-results) is the one that booted
+on the MSXBOOK. v1.0 therefore remains an experimental release until the
+current HDMI/VU build has comparable board coverage.
 
 - `make reprogram` writes that file as it is, without building: only
   openFPGALoader is needed. This is what New Juice's README tells a new user
@@ -593,12 +589,13 @@ or `openFPGALoader -b tangnano20k -f new-juice.fs`, and the YRW801 with
 
 ### The YRW801
 
-The MoonSound needs the Yamaha YRW801 wave ROM (2 MB). It is copyrighted by
-Yamaha, so it is **not** in this repository and never goes into a release:
-each user writes their own image to the flash at 0x200000 (`make yrw801`).
-`.gitignore` keeps out any file with `yrw801` in its name, in any case and
-any folder (the loader's source `yrw801_loader.v` excepted). A checksum taken while it is copied tells
-whether the image is a YRW801 (the LED warning above).
+The MoonSound needs the Yamaha YRW801 wave ROM (2 MB). The v1.0 private
+release includes `yrw801.bin` at the explicit request and under the
+responsibility of the repository owner; it is not tracked in the source tree.
+It is written to flash at 0x200000. `.gitignore` keeps out any file with
+`yrw801` in its name, in any case and any folder (the loader's source
+`yrw801_loader.v` excepted). A checksum taken while it is copied tells whether
+the image is a YRW801 (the LED warning above).
 
 ## Known limits
 

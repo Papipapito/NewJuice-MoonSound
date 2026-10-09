@@ -301,6 +301,9 @@ module top
     (* syn_preserve = 1, ASYNC_REG = "TRUE" *)
     reg [1:0] audio_req_sync = 2'b00;
     reg audio_req_sync_d = 1'b0;
+    // Declared before the audio generate block: Gowin otherwise creates an
+    // undriven `audio_logic_enabled.main_clk` implicit net in that scope.
+    wire main_clk;
 
     // Diagnostic switches. Keep the audio logic running while its physical
     // pins remain static to distinguish an RTL problem from reconfiguration
@@ -374,7 +377,6 @@ module top
     endgenerate
     
     // main pll
-    wire main_clk;
     wire sdram_clk;
     wire opl4_clk54;
     wire opl4_clk_eng;
