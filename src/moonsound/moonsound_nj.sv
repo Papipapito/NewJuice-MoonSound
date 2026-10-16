@@ -272,30 +272,47 @@ module moonsound_nj #(
     assign int_n     = opl4fm_int_n   | ~bus_ok;
 
     // ------------------------------------------------------------------
-    //  Mix (MoonTANG's): FM with the F8 attenuation, wave >> 1, saturated
+    //  Mix (MoonTANG's): FM with the F8 attenuation (bits 2:0 left, 5:3 right;
+    //  until 16/10/2026 the right side used the left bits, which only showed
+    //  with an asymmetric F8), wave x2.03125 in 18 bits, saturated
     // ------------------------------------------------------------------
     wire signed [15:0] o4fm_sl = $signed(opl4fm_wav_l);
     wire signed [15:0] o4fm_sr = $signed(opl4fm_wav_r);
     wire signed [15:0] o4fm_bl = opl4_mixfm[0] ? (o4fm_sl >>> 1) + (o4fm_sl >>> 2) : o4fm_sl;
-    wire signed [15:0] o4fm_br = opl4_mixfm[0] ? (o4fm_sr >>> 1) + (o4fm_sr >>> 2) : o4fm_sr;
+    wire signed [15:0] o4fm_br = opl4_mixfm[3] ? (o4fm_sr >>> 1) + (o4fm_sr >>> 2) : o4fm_sr;
     wire signed [15:0] o4fm_al = o4fm_bl >>> opl4_mixfm[2:1];
-    wire signed [15:0] o4fm_ar = o4fm_br >>> opl4_mixfm[2:1];
+    wire signed [15:0] o4fm_ar = o4fm_br >>> opl4_mixfm[5:4];
     wire signed [15:0] fm_l = (opl4_mixfm[2:0] == 3'd7) ? 16'sd0 : o4fm_al;
-    wire signed [15:0] fm_r = (opl4_mixfm[2:0] == 3'd7) ? 16'sd0 : o4fm_ar;
-    wire signed [15:0] wave_l = opl4pcm_l >>> 1;
-    wire signed [15:0] wave_r = opl4pcm_r >>> 1;
-    assign vu_fm_l   = fm_l;
-    assign vu_fm_r   = fm_r;
-    assign vu_wave_l = wave_l;
-    assign vu_wave_r = wave_r;
+    wire signed [15:0] fm_r = (opl4_mixfm[5:3] == 3'd7) ? 16'sd0 : o4fm_ar;
+    // Wave: the engine attenuates each of its 24 voices 15 dB (x0.1768) before
+    // adding them, as the chip does, so dense music no longer clips (MSXimus Z
+    // Z1.2.7, MoonTANG 1.0.3beta); the mixer gives that back with x2.03125 =
+    // 2 + 1/32 in 18 bits (|engine| <= 32768 -> |wave18| <= 66560, no overflow),
+    // which leaves one voice at 23/64 of its scale: MoonTANG's level (-8.87 dB,
+    // 2.87 dB below the ">> 1" this mixer used before, so that PCM instruments
+    // do not sit above the FM at the reset level F8 = 1Bh).
+    wire signed [15:0] o4pcm_sl = $signed(opl4pcm_l);
+    wire signed [15:0] o4pcm_sr = $signed(opl4pcm_r);
+    wire signed [17:0] o4pcm_el = {{2{o4pcm_sl[15]}}, o4pcm_sl};
+    wire signed [17:0] o4pcm_er = {{2{o4pcm_sr[15]}}, o4pcm_sr};
+    wire signed [17:0] wave18_l = (o4pcm_el <<< 1) + (o4pcm_el >>> 5);
+    wire signed [17:0] wave18_r = (o4pcm_er <<< 1) + (o4pcm_er >>> 5);
 
     function automatic signed [15:0] sat16(input signed [17:0] v);
         sat16 = (v >  18'sd32767) ? 16'sh7FFF :
                 (v < -18'sd32768) ? 16'sh8000 : v[15:0];
     endfunction
 
-    wire signed [17:0] mixL = {{2{fm_l[15]}}, fm_l} + {{2{wave_l[15]}}, wave_l};
-    wire signed [17:0] mixR = {{2{fm_r[15]}}, fm_r} + {{2{wave_r[15]}}, wave_r};
+    // the VU meter sees the wave saturated to 16 bits; the mix adds it in 18
+    wire signed [15:0] wave_l = sat16(wave18_l);
+    wire signed [15:0] wave_r = sat16(wave18_r);
+    assign vu_fm_l   = fm_l;
+    assign vu_fm_r   = fm_r;
+    assign vu_wave_l = wave_l;
+    assign vu_wave_r = wave_r;
+
+    wire signed [17:0] mixL = {{2{fm_l[15]}}, fm_l} + wave18_l;
+    wire signed [17:0] mixR = {{2{fm_r[15]}}, fm_r} + wave18_r;
     wire signed [18:0] mixS = {mixL[17], mixL} + {mixR[17], mixR};
     wire signed [17:0] mixM = mixS[18:1];
 

@@ -9,8 +9,15 @@
 // 5379b34b, 2026-07-14). Derived from MAME's ymf278b.cpp, BSD-3-Clause, holders
 // R. Belmont / Olivier Galibert / hap. RAM primitives reworked for Gowin by the
 // MSXimus project (era v3: block RAM with per-slot sweep). Below this header the
-// file is byte-identical to the MSXimus Z one of 05/10/2026 (slot register
-// read-back fix).
+// file is byte-identical to the MSXimus Z one of 16/10/2026, Z1.2.10 (slot register
+// read-back fix, F8 = 1Bh after reset, NEW2 set and cleared with the data on
+// C5h/C7h, and the wave engine like the chip: 24-voice headroom at -15 dB per
+// slot, TL fades with LD=0, envelope rates per YMF278B stopping at -60 dB, DAMP
+// and pseudo-reverb, DL in 3 dB steps, panning -3 dB/step, the level sum
+// (envelope + TL + tremolo) saturating instead of wrapping, exact LFO rates,
+// idle slots (at -60 dB) no longer reading wave memory,
+// register reads through 7Fh that no longer disturb other slots, LFO reset on
+// its own slot and no output while the memory access mode is on).
 // See THIRD_PARTY/NOTICE.md.
 // ============================================================================
 module YMF278B (
@@ -173,31 +180,27 @@ module YMF278B (
 	wire [2:0] KEY_RAM_Q;
 	reg [21:0] LFO_RAM_D = 0;
 	wire [21:0] LFO_RAM_Q;
+	localparam RT_DM = 3'd7;
+	reg [7:0] rt_q [0:7];
+	wire [7:0] REG_DM_Q = rt_q[RT_DM];
 	wire [15:0] REG_FNUM_Q;
 	wire [7:0] REG_LFO_Q;
-	localparam RT_PN = 3'd6;
-	reg [7:0] rt_q [0:6];
-	wire [7:0] REG_PAN_Q = rt_q[RT_PN];
 	wire REG_PAN_SEL = (REG_A >= 8'h68) && (REG_A <= 8'h7f);
 	localparam RT_WT = 3'd4;
 	wire [7:0] REG_WTN_Q = rt_q[RT_WT];
 	wire REG_WTN_SEL = (REG_A >= 8'h08) && (REG_A <= 8'h1f);
-	function [9:0] YMF278B_PKG_LFOFreqDiv;
+	function [5:0] YMF278B_PKG_LFOStep;
 		input reg [2:0] LFO;
-		reg [10:0] RET;
-		begin
-			case (LFO)
-				3'h0: RET = 10'd1013;
-				3'h1: RET = 10'd85;
-				3'h2: RET = 10'd54;
-				3'h3: RET = 10'd41;
-				3'h4: RET = 10'd33;
-				3'h5: RET = 10'd29;
-				3'h6: RET = 10'd28;
-				3'h7: RET = 10'd25;
-			endcase
-			YMF278B_PKG_LFOFreqDiv = RET - 10'd1;
-		end
+		case (LFO)
+			3'h0: YMF278B_PKG_LFOStep = 6'd1;
+			3'h1: YMF278B_PKG_LFOStep = 6'd12;
+			3'h2: YMF278B_PKG_LFOStep = 6'd19;
+			3'h3: YMF278B_PKG_LFOStep = 6'd25;
+			3'h4: YMF278B_PKG_LFOStep = 6'd31;
+			3'h5: YMF278B_PKG_LFOStep = 6'd35;
+			3'h6: YMF278B_PKG_LFOStep = 6'd37;
+			3'h7: YMF278B_PKG_LFOStep = 6'd42;
+		endcase
 	endfunction
 	localparam [44:0] YMF278B_PKG_OP2_RESET = 45'h000000000000;
 	function [22:0] YMF278B_PKG_PhaseCalc;
@@ -246,13 +249,11 @@ module YMF278B (
 			YMF278B_PKG_VIBCalc = (NEG ? ~{1'b0, MAG} + 8'd1 : {1'b0, MAG});
 		end
 	endfunction
-	reg [9:0] OP1_LFO_DIV = 0;
-	reg [7:0] OP1_LFO_DATA = 0;
+	reg [17:0] OP1_LFO_CNT = 0;
 	reg [0:23] REG_KB_OLD = 0;
 	reg [7:0] PLFO_WAVE = 0;
 	reg [22:0] PHASE = 0;
-	reg [7:0] NEW_LFO_DATA = 0;
-	reg [9:0] NEW_LFO_DIV = 0;
+	reg [17:0] NEW_LFO_CNT = 0;
 	reg [3:0] NEW_LOAD_POS = 0;
 	always @(posedge CLK or negedge RST_N) begin : sv2v_autoblock_2
 		if (!RST_N) begin
@@ -285,9 +286,9 @@ module YMF278B (
 					2'b00: begin
 						{OP1_OCT, OP1_PREVERB, OP1_FNUM} <= REG_FNUM_Q[15:1];
 						{OP1_LFO, OP1_VIB} <= REG_LFO_Q[5:0];
-						OP1_LFORST <= REG_PAN_Q[5];
+						OP1_LFORST <= REG_DM_Q[5];
 						OP1_WTN <= {REG_FNUM_Q[0], REG_WTN_Q};
-						{OP1_LOAD_POS, OP1_LFO_DIV, OP1_LFO_DATA} <= LFO_RAM_Q;
+						{OP1_LOAD_POS, OP1_LFO_CNT} <= LFO_RAM_Q;
 					end
 				endcase
 			if (CYCLE1_CE) begin
@@ -306,7 +307,7 @@ module YMF278B (
 				if (REG_LOAD[SLOT])
 					REG_LOAD[SLOT] <= 0;
 			end
-			PLFO_WAVE <= YMF278B_PKG_VIBCalc(OP1_LFO_DATA, OP1_VIB);
+			PLFO_WAVE <= YMF278B_PKG_VIBCalc(OP1_LFO_CNT[17:10], OP1_VIB);
 			PHASE = YMF278B_PKG_PhaseCalc(OP1_FNUM, OP1_OCT, PLFO_WAVE);
 			if (SLOT1_CE) begin
 				OP2[44-:5] <= SLOT;
@@ -324,18 +325,7 @@ module YMF278B (
 				end
 			end
 			if (SLOT1_CE) begin
-				if (!OP1_LFO_DIV) begin
-					NEW_LFO_DIV = YMF278B_PKG_LFOFreqDiv(OP1_LFO);
-					NEW_LFO_DATA = OP1_LFO_DATA + 8'd1;
-				end
-				else begin
-					NEW_LFO_DIV = OP1_LFO_DIV - 10'd1;
-					NEW_LFO_DATA = OP1_LFO_DATA;
-				end
-				if (OP1_LFORST) begin
-					NEW_LFO_DIV = 1'sb0;
-					NEW_LFO_DATA = 1'sb0;
-				end
+				NEW_LFO_CNT = (OP1_LFORST ? 18'd0 : OP1_LFO_CNT + {12'd0, YMF278B_PKG_LFOStep(OP1_LFO)});
 				if (KEY_RAM_Q[2])
 					NEW_LOAD_POS = OP1_LOAD_POS + 4'd1;
 				else
@@ -345,7 +335,7 @@ module YMF278B (
 					KEY_RAM_D[2] <= 0;
 				else if (REG_LOAD[SLOT])
 					KEY_RAM_D[2] <= 1;
-				LFO_RAM_D <= {NEW_LOAD_POS, NEW_LFO_DIV, NEW_LFO_DATA};
+				LFO_RAM_D <= {NEW_LOAD_POS, NEW_LFO_CNT};
 			end
 		end
 	end
@@ -379,6 +369,7 @@ module YMF278B (
 	wire [15:0] SO_RAM_Q;
 	reg [1:0] WD_DATA_LEN = 0;
 	reg [21:0] WD_SA = 0;
+	localparam [1:0] YMF278B_PKG_EST_ATTACK = 2'b00;
 	localparam [65:0] YMF278B_PKG_OP3_RESET = 66'h00000000000000000;
 	reg [1:0] OP2_EST = 0;
 	reg [9:0] OP2_EVOL = 0;
@@ -429,7 +420,7 @@ module YMF278B (
 					NEW_SAO = 1'sb0;
 					ALLOW = 0;
 				end
-				else if ((OP2_EVOL >= 10'h3c0) && !OP2[38]) begin
+				else if (((OP2_EVOL >= 10'h280) && (OP2_EST != YMF278B_PKG_EST_ATTACK)) && !OP2[38]) begin
 					NEW_SAO = 1'sb0;
 					ALLOW = 0;
 				end
@@ -528,6 +519,8 @@ module YMF278B (
 	reg [3:0] OP4_DL = 0;
 	reg [3:0] OP4_OCT = 0;
 	reg OP4_FNUM9 = 0;
+	reg OP4_DAMP = 0;
+	reg OP4_PRVB = 0;
 	reg [9:0] OP4_EVOL = 0;
 	reg [1:0] OP4_EST = 0;
 	reg [18:0] SCNT = 0;
@@ -544,7 +537,6 @@ module YMF278B (
 	reg EFF_RATE_OVR = 0;
 	reg ENV_STEP = 0;
 	reg [3:0] ENV_INC = 0;
-	localparam [1:0] YMF278B_PKG_EST_ATTACK = 2'b00;
 	localparam [1:0] YMF278B_PKG_EST_DECAY1 = 2'b01;
 	localparam [1:0] YMF278B_PKG_EST_DECAY2 = 2'b10;
 	localparam [1:0] YMF278B_PKG_EST_RELEASE = 2'b11;
@@ -555,14 +547,16 @@ module YMF278B (
 		input reg FNUM9;
 		reg [5:0] RES;
 		reg [5:0] TEMP;
+		reg [3:0] OCTRC;
 		reg [6:0] KEY_EG_SCALE;
 		reg [6:0] TEMP2;
 		begin
 			TEMP = {2'b00, RC} + {OCT[3], OCT[3], OCT};
+			OCTRC = (TEMP[5] ? 4'd0 : (TEMP[4] ? 4'd15 : TEMP[3:0]));
 			if (RC == 4'hf)
 				KEY_EG_SCALE = 1'sb0;
 			else
-				KEY_EG_SCALE = {TEMP, FNUM9};
+				KEY_EG_SCALE = {2'b00, OCTRC, FNUM9};
 			if (RATE == 4'h0)
 				TEMP2 = 7'h00;
 			else if (RATE == 4'hf)
@@ -573,39 +567,48 @@ module YMF278B (
 			YMF278B_PKG_EffRateCalc = {TEMP2[6], RES};
 		end
 	endfunction
-	localparam [2047:0] YMF278B_PKG_EncIncTbl = 2048'h101010101010101010101010101010101110111011101110101010101011101011101110111111101010101010111010111011101111111010101010101110101110111011111110101010101011101011101110111111101010101010111010111011101111111010101010101110101110111011111110101010101011101011101110111111101010101010111010111011101111111010101010101110101110111011111110101010101011101011101110111111111111111111211121212121212221222222222222224222424242424244424444444444444484448484848484888488888888888888888888888888888888888;
+	localparam [2047:0] YMF278B_PKG_EncIncTbl = 2048'h10101010101110101110111011111110101010101011101011101110111111101010101010111010111011101111111010101010101110101110111011111110101010101011101011101110111111101010101010111010111011101111111010101010101110101110111011111110101010101011101011101110111111101010101010111010111011101111111010101010101110101110111011111110101010101011101011101110111111101010101010111010111011101111111111111111112111212121212122212222222222222242224242424242444244444444444444444444444444444444444;
 	function [3:0] YMF278B_PKG_EnvInc;
-		input reg [17:0] CNT;
+		input reg [18:0] CNT;
 		input reg [5:0] ERATE;
 		reg [2:0] IDX;
 		begin
 			case (ERATE[5:2])
-				4'hc: IDX = CNT[14:12];
-				4'hd: IDX = CNT[15:13];
-				4'he: IDX = CNT[16:14];
-				4'hf: IDX = CNT[17:15];
-				default: IDX = CNT[13:11];
+				4'h0: IDX = CNT[14:12];
+				4'h1: IDX = CNT[13:11];
+				4'h2: IDX = CNT[12:10];
+				4'h3: IDX = CNT[11:9];
+				4'h4: IDX = CNT[10:8];
+				4'h5: IDX = CNT[9:7];
+				4'h6: IDX = CNT[8:6];
+				4'h7: IDX = CNT[7:5];
+				4'h8: IDX = CNT[6:4];
+				4'h9: IDX = CNT[5:3];
+				4'ha: IDX = CNT[4:2];
+				4'hb: IDX = CNT[3:1];
+				default: IDX = CNT[2:0];
 			endcase
 			YMF278B_PKG_EnvInc = YMF278B_PKG_EncIncTbl[(511 - {ERATE, IDX}) * 4+:4];
 		end
 	endfunction
 	function YMF278B_PKG_EnvStep;
-		input reg [17:0] CNT;
+		input reg [18:0] CNT;
 		input reg [5:0] ERATE;
 		reg RET;
 		begin
 			case (ERATE[5:2])
-				4'h0: RET = ~|CNT[10:0];
-				4'h1: RET = ~|CNT[9:0];
-				4'h2: RET = ~|CNT[8:0];
-				4'h3: RET = ~|CNT[7:0];
-				4'h4: RET = ~|CNT[6:0];
-				4'h5: RET = ~|CNT[5:0];
-				4'h6: RET = ~|CNT[4:0];
-				4'h7: RET = ~|CNT[3:0];
-				4'h8: RET = ~|CNT[2:0];
-				4'h9: RET = ~|CNT[1:0];
-				4'ha: RET = ~|CNT[0:0];
+				4'h0: RET = ~|CNT[11:0];
+				4'h1: RET = ~|CNT[10:0];
+				4'h2: RET = ~|CNT[9:0];
+				4'h3: RET = ~|CNT[8:0];
+				4'h4: RET = ~|CNT[7:0];
+				4'h5: RET = ~|CNT[6:0];
+				4'h6: RET = ~|CNT[5:0];
+				4'h7: RET = ~|CNT[4:0];
+				4'h8: RET = ~|CNT[3:0];
+				4'h9: RET = ~|CNT[2:0];
+				4'ha: RET = ~|CNT[1:0];
+				4'hb: RET = ~|CNT[0:0];
 				default: RET = 1;
 			endcase
 			YMF278B_PKG_EnvStep = RET;
@@ -626,14 +629,26 @@ module YMF278B (
 		else if ((OP4_EST != YMF278B_PKG_EST_RELEASE) && OP4[6])
 			RATE = OP4_RR;
 		{EFF_RATE_OVR, EFF_RATE} = YMF278B_PKG_EffRateCalc(RATE, OP4_RC, OP4_OCT, OP4_FNUM9);
-		ENV_STEP <= YMF278B_PKG_EnvStep(SCNT[18:1], EFF_RATE);
-		ENV_INC <= YMF278B_PKG_EnvInc(SCNT[18:1], EFF_RATE);
+		if ((OP4_EST != YMF278B_PKG_EST_ATTACK) && !((OP4_EST == YMF278B_PKG_EST_RELEASE) && OP4[7])) begin
+			if (OP4_DAMP) begin
+				EFF_RATE_OVR = 1'b0;
+				EFF_RATE = (OP4_EVOL < 10'h080 ? 6'd48 : 6'd63);
+			end
+			else if (OP4_PRVB && (OP4_EVOL >= 10'h0c0)) begin
+				EFF_RATE_OVR = 1'b0;
+				EFF_RATE = 6'd20;
+			end
+		end
+		ENV_STEP <= YMF278B_PKG_EnvStep(SCNT, EFF_RATE);
+		ENV_INC <= YMF278B_PKG_EnvInc(SCNT, EFF_RATE);
 	end
 	reg [7:0] OP4_LFO_DATA = 0;
 	reg [2:0] OP4_AM = 0;
 	reg [11:0] EVOL_RAM_D = 0;
 	localparam RT_AM = 3'd3;
 	wire [7:0] REG_AM_Q = rt_q[RT_AM];
+	reg rt_dp4 = 0;
+	wire REG_DAMP_Q = rt_dp4;
 	localparam RT_R0 = 3'd0;
 	wire [7:0] REG_RATE0_Q = rt_q[RT_R0];
 	localparam RT_R1 = 3'd1;
@@ -665,6 +680,8 @@ module YMF278B (
 	localparam [41:0] YMF278B_PKG_OP5_RESET = 42'h00000000000;
 	reg [10:0] ATTACK_VOL_CALC = 0;
 	reg [10:0] DECAY_VOL_CALC = 0;
+	reg signed [10:0] NOTV = 0;
+	reg signed [10:0] ATK_STEP = 0;
 	reg [9:0] NEW_EVOL = 0;
 	reg [1:0] NEW_EST = 0;
 	always @(posedge CLK or negedge RST_N) begin : sv2v_autoblock_6
@@ -672,12 +689,14 @@ module YMF278B (
 			OP5 <= YMF278B_PKG_OP5_RESET;
 			{OP4_AR, OP4_D1R, OP4_D2R, OP4_RR, OP4_RC, OP4_DL} <= 1'sb0;
 			{OP4_OCT, OP4_FNUM9} <= 1'sb0;
+			{OP4_DAMP, OP4_PRVB} <= 1'sb0;
 			{OP4_EST, OP4_EVOL} <= 1'sb0;
 		end
 		else if (!RES_N) begin
 			OP5 <= YMF278B_PKG_OP5_RESET;
 			{OP4_AR, OP4_D1R, OP4_D2R, OP4_RR, OP4_RC, OP4_DL} <= 1'sb0;
 			{OP4_OCT, OP4_FNUM9} <= 1'sb0;
+			{OP4_DAMP, OP4_PRVB} <= 1'sb0;
 			{OP4_EST, OP4_EVOL} <= 1'sb0;
 		end
 		else begin
@@ -686,26 +705,30 @@ module YMF278B (
 				{OP4_DL, OP4_D2R} <= REG_RATE1_Q;
 				{OP4_RC, OP4_RR} <= REG_RATE2_Q;
 				OP4_AM <= REG_AM_Q[2:0];
+				OP4_DAMP <= REG_DAMP_Q;
 				case (CYCLE_NUM[2:1])
 					2'b10: begin
 						OP4_OCT <= REG_FNUM_Q[15:12];
 						OP4_FNUM9 <= REG_FNUM_Q[10];
+						OP4_PRVB <= REG_FNUM_Q[11];
 						{OP4_EST, OP4_EVOL} <= EVOL_RAM_Q;
-						OP4_LFO_DATA <= LFO_RAM_Q[7:0];
+						OP4_LFO_DATA <= LFO_RAM_Q[17:10];
 					end
 				endcase
 			end
 			if (SLOT1_CE) begin
 				NEW_EVOL = OP4_EVOL;
 				NEW_EST = OP4_EST;
-				ATTACK_VOL_CALC = {1'b0, OP4_EVOL} + (ENV_STEP ? $signed($signed(~{1'b0, OP4_EVOL}) * $unsigned(ENV_INC)) : 11'd0);
+				NOTV = ~{1'b0, OP4_EVOL};
+				ATK_STEP = (ENV_INC[3] ? NOTV >>> 1 : (ENV_INC[2] ? NOTV >>> 2 : (ENV_INC[1] ? NOTV >>> 3 : (ENV_INC[0] ? NOTV >>> 4 : 11'sd0))));
+				ATTACK_VOL_CALC = {1'b0, OP4_EVOL} + (ENV_STEP ? ATK_STEP : 11'd0);
 				DECAY_VOL_CALC = {1'b0, OP4_EVOL} + (ENV_STEP ? {7'b0000000, ENV_INC} : 11'd0);
 				if (OP4[8]) begin
 					NEW_EVOL = 10'h3ff;
 					NEW_EST = YMF278B_PKG_EST_RELEASE;
 				end
 				else if ((OP4_EST == YMF278B_PKG_EST_RELEASE) && OP4[7]) begin
-					NEW_EVOL = (EFF_RATE_OVR ? 10'h000 : 10'h280);
+					NEW_EVOL = (EFF_RATE == 6'h3f ? 10'h000 : 10'h280);
 					NEW_EST = YMF278B_PKG_EST_ATTACK;
 				end
 				else if ((OP4_EST != YMF278B_PKG_EST_RELEASE) && OP4[6])
@@ -718,26 +741,28 @@ module YMF278B (
 							else
 								NEW_EVOL = 10'h000;
 							if (!OP4_EVOL)
-								NEW_EST = YMF278B_PKG_EST_DECAY1;
+								NEW_EST = (OP4_DL == 4'd0 ? YMF278B_PKG_EST_DECAY2 : YMF278B_PKG_EST_DECAY1);
 						end
 						YMF278B_PKG_EST_DECAY1: begin
 							if (!DECAY_VOL_CALC[10])
 								NEW_EVOL = DECAY_VOL_CALC[9:0];
 							else
 								NEW_EVOL = 10'h3ff;
-							if (OP4_EVOL[9:6] == OP4_DL)
+							if (OP4_EVOL[9:5] >= {&OP4_DL, OP4_DL})
 								NEW_EST = YMF278B_PKG_EST_DECAY2;
 						end
 						YMF278B_PKG_EST_DECAY2:
-							if (!DECAY_VOL_CALC[10])
-								NEW_EVOL = DECAY_VOL_CALC[9:0];
+							if (OP4_EVOL >= 10'h280)
+								NEW_EVOL = OP4_EVOL;
+							else if (DECAY_VOL_CALC >= 11'h280)
+								NEW_EVOL = 10'h280;
 							else
-								NEW_EVOL = 10'h3ff;
+								NEW_EVOL = DECAY_VOL_CALC[9:0];
 						YMF278B_PKG_EST_RELEASE:
-							if (!DECAY_VOL_CALC[10])
-								NEW_EVOL = DECAY_VOL_CALC[9:0];
+							if (DECAY_VOL_CALC >= 11'h280)
+								NEW_EVOL = 10'h280;
 							else
-								NEW_EVOL = 10'h3ff;
+								NEW_EVOL = DECAY_VOL_CALC[9:0];
 					endcase
 				EVOL_RAM_D <= {NEW_EST, NEW_EVOL};
 				OP5[41-:5] <= OP4[13-:5];
@@ -768,10 +793,21 @@ module YMF278B (
 		input reg [9:0] LEVEL;
 		input reg [9:0] TL;
 		input reg [7:0] ALFO;
-		reg [10:0] SUM;
+		reg [10:0] ENV;
+		reg [11:0] SUM;
+		reg [0:1] _sv2v_jump;
 		begin
-			SUM = ({1'b0, LEVEL} + {1'b0, TL}) + {3'b000, ALFO};
-			YMF278B_PKG_LevelAddTLALFO = (!SUM[10] ? SUM[9:0] : 10'h3ff);
+			_sv2v_jump = 2'b00;
+			ENV = {1'b0, LEVEL} + {3'b000, ALFO};
+			SUM = {1'b0, ENV} + {2'b00, TL};
+			if (ENV >= 11'h280) begin
+				YMF278B_PKG_LevelAddTLALFO = 10'h3ff;
+				_sv2v_jump = 2'b11;
+			end
+			if (_sv2v_jump == 2'b00) begin
+				YMF278B_PKG_LevelAddTLALFO = (SUM[11:10] == 2'b00 ? SUM[9:0] : 10'h3ff);
+				_sv2v_jump = 2'b11;
+			end
 		end
 	endfunction
 	localparam [33:0] YMF278B_PKG_OP6_RESET = 34'h000000000;
@@ -793,17 +829,17 @@ module YMF278B (
 			if (SLOT1_CE) begin
 				if (OP5_LDIR)
 					TL_RAM_D <= {OP5_TL, 10'h000};
-				else if (TL_INT > OP5_TL)
-					TL_RAM_D <= {TL_INT, TL_FRAC} + 17'd19;
 				else if (TL_INT < OP5_TL)
-					TL_RAM_D <= {TL_INT, TL_FRAC} - 17'd38;
+					TL_RAM_D <= {TL_INT, TL_FRAC} + 17'd38;
+				else if (TL_INT > OP5_TL)
+					TL_RAM_D <= {TL_INT, TL_FRAC} - 17'd76;
 				else
-					TL_RAM_D <= {TL_INT, TL_FRAC};
+					TL_RAM_D <= {TL_INT, 10'h000};
 				OP6[33-:5] <= OP5[41-:5];
 				OP6[28] <= OP5[36];
 				OP6[27] <= OP5[35];
 				OP6[26] <= OP5[34];
-				OP6[9-:10] <= YMF278B_PKG_LevelAddTLALFO(OP5[17-:10], {TL_INT, TL_FRAC[9:8]}, OP5[7-:8]);
+				OP6[9-:10] <= YMF278B_PKG_LevelAddTLALFO(OP5[17-:10], (TL_INT == 7'h7f ? 10'h3ff : {1'b0, TL_INT, TL_FRAC[9:8]}), OP5[7-:8]);
 				OP6[25-:16] <= OP5[33-:16];
 			end
 		end
@@ -816,6 +852,14 @@ module YMF278B (
 		.RDADDR(OP5[41-:5]),
 		.Q(TL_RAM_Q)
 	);
+	function signed [15:0] YMF278B_PKG_Atten15;
+		input reg signed [15:0] WAVE;
+		reg signed [32:0] P;
+		begin
+			P = $signed(WAVE) * $signed(17'sd23170);
+			YMF278B_PKG_Atten15 = P[32:17];
+		end
+	endfunction
 	localparam [23:0] YMF278B_PKG_OP7_RESET = 24'h000000;
 	function signed [15:0] YMF278B_PKG_VolCalc;
 		input reg signed [15:0] WAVE;
@@ -825,7 +869,7 @@ module YMF278B (
 		begin
 			MULT = WAVE * $signed({3'b001, ~LEVEL[5:0]});
 			RES = $signed(MULT[22:7]) >>> LEVEL[9:6];
-			YMF278B_PKG_VolCalc = RES;
+			YMF278B_PKG_VolCalc = (LEVEL[9:6] == 4'hf ? 16'sd0 : RES);
 		end
 	endfunction
 	always @(posedge CLK or negedge RST_N)
@@ -838,32 +882,35 @@ module YMF278B (
 			OP7[18] <= OP6[28];
 			OP7[17] <= OP6[27];
 			OP7[16] <= OP6[26];
-			OP7[15-:16] <= YMF278B_PKG_VolCalc(OP6[25-:16], OP6[9-:10]);
+			OP7[15-:16] <= YMF278B_PKG_Atten15(YMF278B_PKG_VolCalc(OP6[25-:16], OP6[9-:10]));
 		end
 	reg [3:0] OP7_PAN = 0;
 	reg OP7_CH = 0;
-	reg [17:0] ACC_L = 0;
-	reg [17:0] ACC_R = 0;
+	reg [18:0] ACC_L = 0;
+	reg [18:0] ACC_R = 0;
+	localparam RT_PN = 3'd6;
+	wire [7:0] REG_PAN_Q = rt_q[RT_PN];
+	function signed [15:0] YMF278B_PKG_MixCalc;
+		input reg signed [15:0] WAVE;
+		input reg [2:0] MIX;
+		reg signed [15:0] BASE;
+		begin
+			BASE = (MIX[0] ? ($signed(WAVE) >>> 1) + ($signed(WAVE) >>> 2) : $signed(WAVE));
+			YMF278B_PKG_MixCalc = (MIX == 3'd7 ? 16'sd0 : $signed(BASE >>> MIX[2:1]));
+		end
+	endfunction
 	function signed [15:0] YMF278B_PKG_PanLCalc;
 		input reg signed [15:0] WAVE;
 		input reg [3:0] PAN;
-		reg [3:0] S;
-		reg [15:0] TEMP;
-		begin
-			S = 4'd0 + PAN;
-			TEMP = $signed($signed(WAVE) >>> {S[2:0], 1'b0});
-			YMF278B_PKG_PanLCalc = (PAN == 4'h0 ? WAVE : (PAN == 4'h8 ? 16'h0000 : (PAN[3] ? WAVE : $signed(TEMP))));
-		end
+		YMF278B_PKG_PanLCalc = (PAN == 4'h8 ? 16'sd0 : ((PAN == 4'h0) || PAN[3] ? WAVE : YMF278B_PKG_MixCalc(WAVE, PAN[2:0])));
 	endfunction
 	function signed [15:0] YMF278B_PKG_PanRCalc;
 		input reg signed [15:0] WAVE;
 		input reg [3:0] PAN;
 		reg [3:0] S;
-		reg [15:0] TEMP;
 		begin
 			S = 4'd0 - PAN;
-			TEMP = $signed($signed(WAVE) >>> {S[2:0], 1'b0});
-			YMF278B_PKG_PanRCalc = (PAN == 4'h0 ? WAVE : (PAN == 4'h8 ? 16'h0000 : (!PAN[3] ? WAVE : $signed(TEMP))));
+			YMF278B_PKG_PanRCalc = (PAN == 4'h8 ? 16'sd0 : (!PAN[3] ? WAVE : YMF278B_PKG_MixCalc(WAVE, S[2:0])));
 		end
 	endfunction
 	reg [4:0] S = 0;
@@ -890,32 +937,41 @@ module YMF278B (
 			PAN_R = YMF278B_PKG_PanRCalc(TEMP, OP7_PAN);
 			if (SLOT1_CE) begin
 				if (S == 5'd0) begin
-					ACC_L <= {{2 {PAN_L[15]}}, PAN_L[15:0]};
-					ACC_R <= {{2 {PAN_R[15]}}, PAN_R[15:0]};
+					ACC_L <= {{3 {PAN_L[15]}}, PAN_L[15:0]};
+					ACC_R <= {{3 {PAN_R[15]}}, PAN_R[15:0]};
 				end
 				else begin
-					ACC_L <= ACC_L + {{2 {PAN_L[15]}}, PAN_L[15:0]};
-					ACC_R <= ACC_R + {{2 {PAN_R[15]}}, PAN_R[15:0]};
+					ACC_L <= ACC_L + {{3 {PAN_L[15]}}, PAN_L[15:0]};
+					ACC_R <= ACC_R + {{3 {PAN_R[15]}}, PAN_R[15:0]};
 				end
 			end
 		end
 	end
 	reg [15:0] PCM_L = 0;
 	reg [15:0] PCM_R = 0;
-	function signed [15:0] YMF278B_PKG_TrimWave;
-		input reg signed [17:0] WAVE;
-		YMF278B_PKG_TrimWave = (WAVE[17] && (WAVE[16:15] != 2'b11) ? 16'h8000 : (!WAVE[17] && (WAVE[16:15] != 2'b00) ? 16'h7fff : WAVE[15:0]));
+	reg MM_SEEN = 0;
+	reg MM_HOLD = 0;
+	function signed [15:0] YMF278B_PKG_TrimWave19;
+		input reg signed [18:0] WAVE;
+		YMF278B_PKG_TrimWave19 = (WAVE[18] && (WAVE[17:15] != 3'b111) ? 16'h8000 : (!WAVE[18] && (WAVE[17:15] != 3'b000) ? 16'h7fff : WAVE[15:0]));
 	endfunction
 	always @(posedge CLK or negedge RST_N)
 		if (!RST_N) begin
 			PCM_L <= 1'sb0;
 			PCM_R <= 1'sb0;
+			{MM_SEEN, MM_HOLD} <= 1'sb0;
 		end
 		else if (!RES_N)
 			;
-		else if (((OP7[23-:5] == 5'd0) && (CYCLE_NUM[2:1] == 2'b00)) && CYCLE1_CE) begin
-			PCM_L <= (!SND_EN[2] ? 16'h0000 : YMF278B_PKG_TrimWave(ACC_L));
-			PCM_R <= (!SND_EN[2] ? 16'h0000 : YMF278B_PKG_TrimWave(ACC_R));
+		else begin
+			if (((OP7[23-:5] == 5'd0) && (CYCLE_NUM[2:1] == 2'b00)) && CYCLE1_CE) begin
+				PCM_L <= (((!SND_EN[2] || MEMMODE[0]) || MM_SEEN) || MM_HOLD ? 16'h0000 : YMF278B_PKG_TrimWave19(ACC_L));
+				PCM_R <= (((!SND_EN[2] || MEMMODE[0]) || MM_SEEN) || MM_HOLD ? 16'h0000 : YMF278B_PKG_TrimWave19(ACC_R));
+				MM_HOLD <= MM_SEEN;
+				MM_SEEN <= 0;
+			end
+			if (MEMMODE[0])
+				MM_SEEN <= 1;
 		end
 	reg MEM_WREQ = 0;
 	reg MEM_RREQ = 0;
@@ -950,7 +1006,7 @@ module YMF278B (
 			MEMMODE <= 1'sb0;
 			MEMADDR <= 1'sb0;
 			MEMDAT <= 1'sb0;
-			MIXFM <= 1'sb0;
+			MIXFM <= 6'h1b;
 			MIXPCM <= 1'sb0;
 			REG_Q <= 1'sb0;
 			{BUSY, BUSY2} <= 0;
@@ -988,14 +1044,15 @@ module YMF278B (
 				REG_RD <= 1;
 				BUSY <= 1;
 			end
-			if ((!WR_N && WR_N_OLD) && !CS_N) begin
-				REG_NEW_SEL <= 0;
+			if ((!WR_N && WR_N_OLD) && !CS_N)
 				case (A)
+					3'h0: REG_NEW_SEL <= 0;
 					3'h2: REG_NEW_SEL <= DI == 8'h05;
-					3'h3:
-						if (REG_NEW_SEL && DI[1]) begin
-							NEW2 <= 1;
-							LD2 <= 1;
+					3'h1, 3'h3:
+						if (REG_NEW_SEL) begin
+							NEW2 <= DI[1];
+							if (DI[1])
+								LD2 <= 1;
 						end
 					3'h4:
 						if (NEW2)
@@ -1007,7 +1064,6 @@ module YMF278B (
 							BUSY <= 1;
 						end
 				endcase
-			end
 			if ((OP7[23-:5] == 5'd23) && SLOT1_CE) begin
 				if (LD_WAIT)
 					LD_WAIT <= LD_WAIT - 4'd1;
@@ -1201,7 +1257,7 @@ module YMF278B (
 		.WRADDR((RST ? SLOT : REG_A[4:0] - 5'h18)),
 		.DATA((RST ? sv2v_uu_REG_FNUM0_ext_DATA_0 : REG_D)),
 		.WREN((RST ? 1'b1 : (REG_WR & REG_FNUM0_SEL) & CYCLE1_CE)),
-		.RDADDR((REG_RD ? REG_A[4:0] - 5'h18 : FNUM_RA)),
+		.RDADDR((REG_RD & REG_FNUM0_SEL ? REG_A[4:0] - 5'h18 : FNUM_RA)),
 		.Q(REG_FNUM_Q[15:8])
 	);
 	localparam sv2v_uu_REG_FNUM1_dw = 8;
@@ -1214,7 +1270,7 @@ module YMF278B (
 		.WRADDR((RST ? SLOT : REG_A[4:0] - 5'h00)),
 		.DATA((RST ? sv2v_uu_REG_FNUM1_ext_DATA_0 : REG_D)),
 		.WREN((RST ? 1'b1 : (REG_WR & REG_FNUM1_SEL) & CYCLE1_CE)),
-		.RDADDR((REG_RD ? REG_A[4:0] - 5'h00 : FNUM_RA)),
+		.RDADDR((REG_RD & REG_FNUM1_SEL ? REG_A[4:0] - 5'h00 : FNUM_RA)),
 		.Q(REG_FNUM_Q[7:0])
 	);
 	wire REG_LFO_LOAD = OP3[56-:4] == 4'h7;
@@ -1228,7 +1284,7 @@ module YMF278B (
 		.WRADDR((RST ? SLOT : (OP3[57] ? OP3[65-:5] : REG_A[4:0] - 5'h00))),
 		.DATA((RST ? sv2v_uu_REG_LFO_ext_DATA_0 : (OP3[57] ? MEM_D : REG_D))),
 		.WREN((RST ? 1'b1 : (OP3[57] ? REG_LFO_LOAD & SLOT0_CE : (REG_WR & REG_LFO_SEL) & CYCLE1_CE))),
-		.RDADDR((REG_RD ? REG_A[4:0] - 5'h00 : LFO_RA)),
+		.RDADDR((REG_RD & REG_LFO_SEL ? REG_A[4:0] - 5'h00 : LFO_RA)),
 		.Q(REG_LFO_Q)
 	);
 	always @(posedge CLK) begin
@@ -1254,17 +1310,18 @@ module YMF278B (
 	wire rt_cpurd = REG_RD & rt_sel;
 	wire [4:0] rt_slot_nx = (SLOT == 5'd23 ? 5'd0 : SLOT + 5'd1);
 	reg [2:0] rt_swp = 0;
-	wire [4:0] rt_swp_ad = (rt_swp == RT_WT ? rt_slot_nx : (rt_swp == RT_LV ? OP4[13-:5] : (rt_swp == RT_PN ? OP6[33-:5] : OP3[65-:5])));
+	wire [2:0] rt_swp_fld = (rt_swp == RT_DM ? RT_PN : rt_swp);
+	wire [4:0] rt_swp_ad = ((rt_swp == RT_WT) || (rt_swp == RT_DM) ? rt_slot_nx : (rt_swp == RT_LV ? OP4[13-:5] : (rt_swp == RT_PN ? OP6[33-:5] : OP3[65-:5])));
 	(* syn_ramstyle = "block_ram" *) reg [7:0] rt_mem [0:255];
 	initial begin : sv2v_autoblock_12
 		reg signed [31:0] ri = 0;
 		for (ri = 0; ri < 256; ri = ri + 1)
 			rt_mem[ri] = 1'sb0;
 	end
-	reg [7:0] rt_st [0:6];
+	reg [7:0] rt_st [0:7];
 	initial begin : sv2v_autoblock_13
 		reg signed [31:0] ri = 0;
-		for (ri = 0; ri < 7; ri = ri + 1)
+		for (ri = 0; ri < 8; ri = ri + 1)
 			begin
 				rt_q[ri] = 1'sb0;
 				rt_st[ri] = 1'sb0;
@@ -1290,7 +1347,7 @@ module YMF278B (
 		end
 		else if (rt_cpuw_go)
 			rt_cpuw_p <= 1'b0;
-		rt_rq <= rt_mem[(rt_cpurd ? {rt_fld, rt_idx} : {rt_swp, rt_swp_ad})];
+		rt_rq <= rt_mem[(rt_cpurd ? {rt_fld, rt_idx} : {rt_swp_fld, rt_swp_ad})];
 		rt_cap <= rt_swp;
 		rt_cap_on <= rt_swp_on & ~rt_cpurd;
 		rt_cpu_on <= rt_cpurd;
@@ -1298,6 +1355,8 @@ module YMF278B (
 			rt_cpu_q <= rt_rq;
 		else if (rt_cap_on)
 			rt_st[rt_cap] <= rt_rq;
+		if (SLOT1_CE)
+			rt_st[RT_DM] <= 1'sb0;
 		if (RST) begin
 			rt_q[RT_R0] <= 1'sb0;
 			rt_q[RT_R1] <= 1'sb0;
@@ -1305,6 +1364,7 @@ module YMF278B (
 			rt_q[RT_AM] <= 1'sb0;
 			rt_q[RT_LV] <= 1'sb0;
 			rt_q[RT_PN] <= 1'sb0;
+			rt_q[RT_DM] <= 1'sb0;
 		end
 		else if (SLOT1_CE) begin
 			rt_q[RT_R0] <= rt_st[RT_R0];
@@ -1313,6 +1373,7 @@ module YMF278B (
 			rt_q[RT_AM] <= rt_st[RT_AM];
 			rt_q[RT_LV] <= rt_st[RT_LV];
 			rt_q[RT_PN] <= rt_st[RT_PN];
+			rt_q[RT_DM] <= rt_st[RT_DM];
 		end
 		if (OP4[8])
 			rt_q[RT_WT] <= 1'sb0;
@@ -1323,12 +1384,20 @@ module YMF278B (
 			rt_swp <= 3'd0;
 		end
 		else if (rt_swp_on && !rt_cpurd) begin
-			if (rt_swp == RT_PN)
+			if (rt_swp == RT_DM)
 				rt_swp_on <= 1'b0;
 			else
 				rt_swp <= rt_swp + 3'd1;
 		end
 	end
+	reg rt_dp2 = 0;
+	reg rt_dp3 = 0;
+	always @(posedge CLK)
+		if (SLOT1_CE) begin
+			rt_dp2 <= REG_DM_Q[6];
+			rt_dp3 <= rt_dp2;
+			rt_dp4 <= rt_dp3;
+		end
 	wire [7:0] OPL3_DO;
 	wire [15:0] OPL3_OUT_A;
 	wire [15:0] OPL3_OUT_B;
@@ -1342,15 +1411,6 @@ module YMF278B (
 	assign OUT0_R = OPL3_OUT_D;
 	assign OUT1_L = PCM_L;
 	assign OUT1_R = PCM_R;
-	function signed [15:0] YMF278B_PKG_MixCalc;
-		input reg signed [15:0] WAVE;
-		input reg [2:0] MIX;
-		reg signed [15:0] BASE;
-		begin
-			BASE = (MIX[0] ? ($signed(WAVE) >>> 1) + ($signed(WAVE) >>> 2) : $signed(WAVE));
-			YMF278B_PKG_MixCalc = (MIX == 3'd7 ? 16'sd0 : $signed(BASE >>> MIX[2:1]));
-		end
-	endfunction
 	assign OUT2_L = YMF278B_PKG_MixCalc(PCM_L, MIXPCM[2:0]) + YMF278B_PKG_MixCalc(OPL3_OUT_A, MIXFM[2:0]);
 	assign OUT2_R = YMF278B_PKG_MixCalc(PCM_R, MIXPCM[5:3]) + YMF278B_PKG_MixCalc(OPL3_OUT_B, MIXFM[5:3]);
 	initial _sv2v_0 = 0;

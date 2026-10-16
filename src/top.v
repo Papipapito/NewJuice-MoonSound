@@ -1137,9 +1137,9 @@ module top
     // The hdmi module is reset with sms_reset_n, which follows the MSX
     // /RESET (active_module_reset_n), and so is the video PLL: the picture
     // can drop for a moment while the MSX is reset.
-    localparam integer VU_FOOT_N = 38;
+    localparam integer VU_FOOT_N = 35;
     localparam [8*VU_FOOT_N-1:0] VU_FOOT =
-        "NEW JUICE MOONSOUND FORK X3 2026-10-06";
+        "NEW JUICE MOONSOUND V1.1 2026-10-16";
 
     reg vu_frame_tog = 1'b0;
     always_ff @(posedge clk)

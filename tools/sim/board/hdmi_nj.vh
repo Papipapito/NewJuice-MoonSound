@@ -320,10 +320,16 @@
             io_rd(16'h00C4);
             while (rdv[1] && polls < 200) begin #20_000; io_rd(16'h00C4); polls = polls + 1; end
             ok(!rdv[1], "flag LD del status se limpia (cabecera leida de la SDRAM)");
-            // key on, panpot 1: in this core (ymf278b_gowin.v) the left side
-            // 12 dB down, so that wave L and wave R differ by 8 segments and a
-            // swap of the two shows on the meter (run_board.sh hdmi checks it)
-            wv_w(8'h68, 8'h81);
+            // key on, panpot 4: the left side 12 dB down, so that wave L and
+            // wave R differ by 8 segments and a swap of the two shows on the
+            // meter (run_board.sh hdmi checks it).
+            // 16/10/2026: panpot 4, it was 1. The engine of v1.0 attenuated
+            // 12 dB per panpot step (1 = x0.25); the ported one (MSXimus Z
+            // Z1.2.10) follows the YMF278B, 3 dB per step (1 = x0.75, -2.5 dB:
+            // wave L/R 21/22, a single segment apart, and the swap control
+            // would hang on that one segment). Panpot 4 = x0.25 = -12.04 dB,
+            // the same 12 dB and 8 segments as before.
+            wv_w(8'h68, 8'h84);
             fm_w(0, 8'h20, 8'h01); fm_w(0, 8'h23, 8'h01);
             fm_w(0, 8'h40, 8'h3F); fm_w(0, 8'h43, 8'h00);
             fm_w(0, 8'h60, 8'hF0); fm_w(0, 8'h63, 8'hF0);
