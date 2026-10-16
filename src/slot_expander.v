@@ -9,6 +9,9 @@ module slot_expander
     input rd_n,
     input wr_n,
     input sltsl_n,
+    // MoonSound fork (timing): addr == FFFFh, registered with addr by
+    // mp_debouncer (the same decode sdram_mapper and linear_rom exclude).
+    input addr_is_ffff,
     output [7:0] data_out,
     output data_out_en,
     output [3:0] page0_subslot_en,
@@ -18,12 +21,10 @@ module slot_expander
     output [7:0] debug_expanded_slot
 );
 
-    localparam [15:0] EXPANDED_SLOT_REG_ADDR = 16'hffff;
-
     reg [7:0] expanded_slot_reg = 8'h00;
 
     wire selected = !sltsl_n && !merq_n /*&& iorq_n*/ &&
-                    addr == EXPANDED_SLOT_REG_ADDR;
+                    addr_is_ffff;
     wire read_selected = selected && !rd_n;
     wire write_selected = selected && !wr_n;
 

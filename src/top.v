@@ -464,6 +464,9 @@ module top
     wire cs12_n;
     wire m1_n;
     wire inputs_latched;
+    wire addr_is_ffff;
+    wire addr_is_sfg_io;
+    wire addr_is_dos2_overlay;
     wire rd_n;
     wire wr_n;
     wire sltsl_n;
@@ -1286,7 +1289,10 @@ module top
         .rfsh_n(rfsh_n),
         .cs12_n(cs12_n),
         .m1_n(m1_n),
-        .inputs_latched(inputs_latched)
+        .inputs_latched(inputs_latched),
+        .addr_is_ffff(addr_is_ffff),
+        .addr_is_sfg_io(addr_is_sfg_io),
+        .addr_is_dos2_overlay(addr_is_dos2_overlay)
     );
 
     generate
@@ -1411,6 +1417,7 @@ module top
         .rd_n(smr_rd_n_fast),
         .wr_n(smr_wr_n_fast),
         .sltsl_n(sltsl_n),
+        .addr_is_ffff(addr_is_ffff),
         .data_out(slot_expander_data_out),
         .data_out_en(slot_expander_data_out_en),
         .page0_subslot_en(page0_subslot_en),
@@ -1459,6 +1466,7 @@ module top
         .rfsh_n(rfsh_n),
         .m1_n(m1_n),
         .sltsl_n(sltsl_n),
+        .addr_is_ffff(addr_is_ffff),
         .page0_subslot_en(page0_subslot_en),
         .page1_subslot_en(page1_subslot_en),
         .page2_subslot_en(page2_subslot_en),
@@ -1540,6 +1548,7 @@ module top
         .rfsh_n(rfsh_n),
         .bus_snapshot_valid(inputs_latched),
         .sltsl_n(sltsl_n),
+        .addr_is_ffff(addr_is_ffff),
         .page0_subslot_en(page0_subslot_en),
         .page1_subslot_en(page1_subslot_en),
         .page2_subslot_en(page2_subslot_en),
@@ -1600,6 +1609,8 @@ module top
         .page0_subslot_en(page0_subslot_en),
         .page1_subslot_en(page1_subslot_en),
         .dos2_overlay_enabled(sd_overlay_enabled),
+        .addr_is_sfg_io(addr_is_sfg_io),
+        .addr_is_dos2_overlay(addr_is_dos2_overlay),
         .data_out(flash_rom_data_out),
         .data_out_en(flash_rom_data_out_en),
         .wait_n(flash_rom_wait_n),

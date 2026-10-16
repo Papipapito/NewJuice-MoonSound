@@ -15,7 +15,11 @@ module mp_debouncer
     output rfsh_n,
     output cs12_n,
     output m1_n,
-    output inputs_latched
+    output inputs_latched,
+    // MoonSound fork (timing): decodes of addr, published with it (below)
+    output addr_is_ffff,
+    output addr_is_sfg_io,
+    output addr_is_dos2_overlay
 );
 
     localparam int MP_A_LO = 0;
@@ -37,6 +41,21 @@ module mp_debouncer
     reg [23:0] latched = 24'hffffff;
     reg inputs_latched_reg = 1'b0;
 
+    // MoonSound fork (timing): three comparisons of the published address,
+    // registered on the same edge as the address. A[7:0] and A[15:8] stop
+    // changing in `debounced` at scan phases 1 and 3, so in phase 5 the flags
+    // are computed from the very value that goes into `latched`: each one
+    // always equals its comparison on addr, with no clock of delay. This
+    // takes the 16-bit comparisons off the one-clock paths from the snapshot
+    // to slot_expander, sdram_mapper, linear_rom and flash_roms, where
+    // synthesis shared them between modules in chains of 3 to 5 LUTs.
+    // The reset values are those of FFFFh.
+    wire [15:0] debounced_addr =
+        {debounced[MP_A_HI +: 8], debounced[MP_A_LO +: 8]};
+    reg addr_is_ffff_reg = 1'b1;          // FFFFh: expanded-slot register
+    reg addr_is_sfg_io_reg = 1'b0;        // 3FF0h-3FF1h: SFG-01 (YM2151)
+    reg addr_is_dos2_overlay_reg = 1'b0;  // 7C00h-7EFFh: SD overlay
+
     always_ff @(posedge clk or negedge reset_n)
     begin
         if(!reset_n) begin
@@ -46,6 +65,9 @@ module mp_debouncer
             debounced <= 24'hffffff;
             latched <= 24'hffffff;
             inputs_latched_reg <= 1'b0;
+            addr_is_ffff_reg <= 1'b1;
+            addr_is_sfg_io_reg <= 1'b0;
+            addr_is_dos2_overlay_reg <= 1'b0;
         end else begin
             inputs_latched_reg <= 1'b0;
 
@@ -111,6 +133,10 @@ module mp_debouncer
 
                     latched[MP_A_LO +: 8] <= debounced[MP_A_LO +: 8];
                     latched[MP_A_HI +: 8] <= debounced[MP_A_HI +: 8];
+                    addr_is_ffff_reg <= debounced_addr == 16'hffff;
+                    addr_is_sfg_io_reg <= debounced_addr[15:1] == 15'h1ff8;
+                    addr_is_dos2_overlay_reg <= debounced_addr >= 16'h7c00 &&
+                                                debounced_addr <= 16'h7eff;
                     msel_reg <= 3'b110;
                     scan_phase <= 3'd0;
                     inputs_latched_reg <= 1'b1;
@@ -132,5 +158,8 @@ module mp_debouncer
     assign cs12_n = latched[MP_CS12_N];
     assign m1_n = latched[MP_M1_N];
     assign inputs_latched = inputs_latched_reg;
+    assign addr_is_ffff = addr_is_ffff_reg;
+    assign addr_is_sfg_io = addr_is_sfg_io_reg;
+    assign addr_is_dos2_overlay = addr_is_dos2_overlay_reg;
 
 endmodule

@@ -59,6 +59,7 @@ module tb_map;
         .clk(clk_108m), .cpu_clk_high(1'b1), .reset_n(map_rst_n),
         .addr(b_addr), .data_in(b_din), .merq_n(b_merq_n), .iorq_n(b_iorq_n), .rd_n(b_rd_n), .wr_n(b_wr_n),
         .rfsh_n(b_rfsh_n), .m1_n(b_m1_n), .sltsl_n(b_sltsl_n),
+        .addr_is_ffff(b_addr == 16'hffff),  // as mp_debouncer registers it with addr
         .page0_subslot_en(4'b1000), .page1_subslot_en(4'b1000), .page2_subslot_en(4'b1000), .page3_subslot_en(4'b1000),
         .data_out(map_dout), .data_out_en(map_dout_en), .wait_n(map_wait_n),
         .debug_page0(), .debug_page1(), .debug_page2(), .debug_page3(),

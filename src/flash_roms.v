@@ -15,6 +15,10 @@ module flash_roms
     input [3:0] page0_subslot_en,
     input [3:0] page1_subslot_en,
     input dos2_overlay_enabled,
+    // MoonSound fork (timing): registered with addr by mp_debouncer, so
+    // these comparisons are not on the paths to the state and the request.
+    input addr_is_sfg_io,        // addr == 3FF0h or 3FF1h
+    input addr_is_dos2_overlay,  // 7C00h <= addr <= 7EFFh
 
     output [7:0] data_out,
     output data_out_en,
@@ -80,10 +84,9 @@ module flash_roms
     wire sfg_selected = page0_selected && page0_subslot_en[1];
     wire dos2_selected = page1_selected && page1_subslot_en[0];
     wire fmpac_selected = page1_selected && page1_subslot_en[1];
-    wire sfg_io_selected = sfg_selected &&
-                           (addr == 16'h3ff0 || addr == 16'h3ff1);
+    wire sfg_io_selected = sfg_selected && addr_is_sfg_io;
     wire dos2_overlay_selected = dos2_overlay_enabled && dos2_selected &&
-                                 addr >= 16'h7c00 && addr <= 16'h7eff;
+                                 addr_is_dos2_overlay;
     wire rom_read_selected = !rd_n &&
                              ((dos2_selected && !dos2_overlay_selected) ||
                               fmpac_selected ||

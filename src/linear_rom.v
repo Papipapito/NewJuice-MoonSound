@@ -14,6 +14,9 @@ module linear_rom
     input rfsh_n,
     input bus_snapshot_valid,
     input sltsl_n,
+    // MoonSound fork (timing): addr == FFFFh, registered with addr by
+    // mp_debouncer, so the comparison is not on the paths to the request.
+    input addr_is_ffff,
     input [3:0] page0_subslot_en,
     input [3:0] page1_subslot_en,
     input [3:0] page2_subslot_en,
@@ -32,7 +35,6 @@ module linear_rom
 );
 
     localparam [2:0] SDRAM_CMD_READ = 3'b101;
-    localparam [15:0] EXPANDED_SLOT_REG_ADDR = 16'hffff;
     localparam [2:0] STATE_IDLE = 3'd0;
     localparam [2:0] STATE_CMD = 3'd1;
     localparam [2:0] STATE_WAIT_ACK = 3'd2;
@@ -58,7 +60,7 @@ module linear_rom
     // FFFFh belongs exclusively to the expanded-slot register. LINEAR is a
     // ROM view: writes never reach SDRAM after the loader selects mode 02h.
     wire read_selected = enabled && !sltsl_n && selected_page &&
-                         addr != EXPANDED_SLOT_REG_ADDR &&
+                         !addr_is_ffff &&
                          !rd_n && wr_n;
     wire coherent_read = address_snapshot_pending &&
                          bus_snapshot_valid &&

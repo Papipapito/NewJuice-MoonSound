@@ -12,6 +12,9 @@ module sdram_mapper
     input rfsh_n,
     input m1_n,
     input sltsl_n,
+    // MoonSound fork (timing): addr == FFFFh, registered with addr by
+    // mp_debouncer, so the comparison is not on the paths to the request.
+    input addr_is_ffff,
     input [3:0] page0_subslot_en,
     input [3:0] page1_subslot_en,
     input [3:0] page2_subslot_en,
@@ -41,7 +44,6 @@ module sdram_mapper
 
     localparam [2:0] SDRAM_CMD_READ = 3'b101;  // {ras_n, cas_n, wen_n}
     localparam [2:0] SDRAM_CMD_WRITE = 3'b100;
-    localparam [15:0] EXPANDED_SLOT_REG_ADDR = 16'hffff;
 
     localparam [2:0] STATE_IDLE = 3'd0;
     localparam [2:0] STATE_CMD = 3'd1;
@@ -77,7 +79,7 @@ module sdram_mapper
         (addr[15:14] == 2'd3 && page3_subslot_en[3]);
     wire memory_cycle_selected =
         !merq_n && iorq_n && rfsh_n && !sltsl_n &&
-        mapper_subslot_selected && addr != EXPANDED_SLOT_REG_ADDR;
+        mapper_subslot_selected && !addr_is_ffff;
     wire memory_read_selected = memory_cycle_selected && !rd_n;
     wire memory_write_selected = memory_cycle_selected && !wr_n;
     wire memory_access_selected = memory_read_selected || memory_write_selected;
