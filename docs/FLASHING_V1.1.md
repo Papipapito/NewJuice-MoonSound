@@ -1,7 +1,8 @@
 # NewJuice-MoonSound v1.1 — flashing guide / guía de flasheo
 
 > **Experimental hardware firmware.** This image has passed synthesis,
-> place-and-route and simulation, but it has only had limited board testing.
+> place-and-route and simulation, but it has not been tried on a board yet
+> (only an earlier build of this branch, X1, has booted on one).
 > Flash it only if you accept the risk of having to recover the board. Do not
 > interrupt power while the external flash is being written.
 

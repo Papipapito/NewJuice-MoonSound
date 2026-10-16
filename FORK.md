@@ -6,16 +6,18 @@ YMF278B / OPL4: OPL3 FM plus the 24-voice wavetable) in place of **Franky**.
 - New Juice is the work of **lfantoniosi**
   (<https://github.com/lfantoniosi/new-juice>). This fork starts at its commit
   `306ca0e` (24 Aug 2026).
-- The MoonSound comes from **MoonTANG** (Albert "Papipapito", with Claude),
-  commit `5400f15`, which in turn builds on the open cores listed under
-  [Licenses](#licenses).
+- The MoonSound comes from **MoonTANG** (Albert "Papipapito", with Claude):
+  v1.0 from its commit `5400f15`, v1.1 from its commit `d67c430` with the
+  wavetable engine of MSXimus Z Z1.2.10. Both build on the open cores listed
+  under [Licenses](#licenses).
 - Branches: `master` is New Juice exactly as upstream; all the work is on
   `moonsound`.
 
 ## Status
 
-Experimental. It builds without timing violations with Gowin 1.9.12.03 and
-1.9.11.03 Education, and every simulation bench passes (`tools/sim/README.md`;
+Experimental. v1.1 builds without timing violations with Gowin 1.9.12.03,
+the only version it has been built with (earlier states of the branch also
+closed with 1.9.11.03 Education), and every simulation bench passes (`tools/sim/README.md`;
 results in [MOONSOUND.md](MOONSOUND.md)).
 
 **v1.1 (16 Oct 2026, sources `0253221`)**, the bitstream now in `impl/pnr/`:
@@ -56,10 +58,10 @@ HDMI (6 Oct 2026): X1 shows a black picture unless the debugger is on (the
 sound scope left with Franky). The sources now show a **VU meter** there:
 the OPL4 FM and wave, left and right, what HDMI plays, left and right, the
 YRW801 state and whether the MSX clock runs. The v1.0 FPGA image was built on
-8 Oct 2026 with Gowin 1.9.12.03 and has 0 setup / 0 hold violated endpoints
-(worst reported main-clock slack +0.008 ns). It has passed the simulation
-benches, but its HDMI/VU output has not yet been checked on a display; treat
-the release as experimental. See [The VU meter on HDMI](#the-vu-meter-on-hdmi).
+8 Oct 2026 with Gowin 1.9.12.03, with 0 setup / 0 hold violated endpoints
+(worst reported main-clock slack +0.008 ns). It passed the simulation
+benches; its HDMI/VU output was never checked on a display, and neither has
+that of v1.1 (described at the top of this section). See [The VU meter on HDMI](#the-vu-meter-on-hdmi).
 
 A register stage on New Juice's bus inputs, meant to give timing margin back
 (X4, 6 Oct 2026), was built and reverted: it did not improve the timing and
@@ -263,8 +265,9 @@ Education, Place 1 / Route 2:
   synchronizer has one stage more (the frame ends one 54 MHz clock later,
   nothing visible changes). Of the variants tried it is the only one that
   closes all four Place 0-1 / Route 1-2 combinations and 1.9.11.03; Route 0
-  fails in both placements. The project is set to **Place 0 / Route 1**, the
-  combination with most margin, and the bitstream X3 is that build.
+  fails in both placements. X3 set the project to **Place 0 / Route 1**, the
+  combination with most margin, and the bitstream X3 is that build (since
+  v1.0, `aa24a00`, the project is at Place 1 / Route 2 again).
 - **The margins of X3 are 4 to 27 ps.** That is placement luck, not a fix:
   the extra register does not touch the failing paths. The variants that did
   not close everything: the meter on main_clk (its own paths fail, -1.8 ns),
@@ -289,14 +292,19 @@ Education, Place 1 / Route 2:
 ### v1.1: the bus decode registered with the snapshot
 
 With the engine of v1.1 (+270 LUTs, the chip at 97 % of CLS) the same paths
-failed: -0.222 to -1.432 ns depending on Place / Route, with the same sources
-placed the same way every time (Gowin is deterministic here: changing texts,
-`Replicate_Resources`, `Route_Maxfan` or `Clock_Route_Order` gives the same
-three results). They are New Juice's own: from the snapshot of
+failed: -0.222 to -1.432 ns depending on Place / Route. The same sources are
+placed the same way every time (Gowin is deterministic here: the footer
+text, `Replicate_Resources`, `Clock_Route_Order` 1 or `Route_Maxfan` 40 gave
+the same result; `Route_Maxfan` 12 gave a different one, worse: -0.775 ns
+with 40 failing endpoints in P0 / R2). Two groups of New Juice's own paths
+failed. The first, the worst in the Place 1 builds, runs from the snapshot of
 `mp_debouncer` (`latched`) to the start decision and the state of
 `sdram_mapper`, `flash_roms`, `linear_rom` and `slot_expander`, where synthesis
 shared the 16-bit address comparisons (FFFFh, 3FF0h-3FF1h, 7C00h-7EFFh)
-between modules in chains of 3 to 5 LUTs spread over the chip.
+between modules in chains of 3 to 5 LUTs spread over the chip. The second,
+the worst in every Place 0 build, is the PSG's tone counter (`jt49`,
+`regarray` -> `count`): 13 of the 19 failing endpoints in P0 / R1, 12 of 19
+in P0 / R2, 8 of 11 in P1 / R1 and 3 of 13 in P1 / R2.
 
 `mp_debouncer` now publishes three flags (`addr_is_ffff`, `addr_is_sfg_io`,
 `addr_is_dos2_overlay`), registered on the same edge and from the same
@@ -312,19 +320,22 @@ byte for byte, as the commit before the change and as v1.0. It was chosen
 among three independent designs (registered decodes; local retiming in the
 consumers; SDC multicycle paths, rejected as unsafe). Cost: about 90 LUTs.
 
-| Place / Route (1.9.12.03) | Before (`5685160`) | v1.1 (`0253221`) |
+| Place / Route (1.9.12.03) | Before: the engine port without its idle-slot and F8 fixes (`5685160` itself was not built) | v1.1 (`0253221`): worst setup slack |
 |---|---|---|
 | 0 / 0 | -0.472 ns, 36 endpoints | +0.003 ns |
 | 0 / 1 | -0.854 ns, 19 | +0.100 ns |
-| 0 / 2 | -0.222 ns, 19 | +0.317 ns |
+| 0 / 2 | -0.222 ns, 19 | +0.172 ns on a half-cycle path (+0.317 ns full-cycle) |
 | 1 / 0 | not built | +0.039 ns |
-| 1 / 1 | -1.432 ns, 11 | +0.369 ns |
-| **1 / 2** (project setting, the versioned bitstream) | -1.317 ns, 13 | **+0.404 ns** (+0.368 ns on a half-cycle path) |
+| 1 / 1 | -1.432 ns, 11 | +0.326 ns on a half-cycle path (+0.369 ns full-cycle) |
+| **1 / 2** (project setting, the versioned bitstream) | -1.317 ns, 13 | **+0.368 ns** on a half-cycle path (+0.404 ns full-cycle) |
 
-In v1.1 the worst full-cycle path is the PSG's tone counter again (`jt49`,
-`regarray` -> `count`, +0.404 ns); a version of `jt49_div` without that
-ripple exists (exact for every input) but would need a fork of the jt49
-submodule, and it is not needed now.
+The half-cycle path is `flash_roms` `state` -> `flash_rom_loaded_fall`
+(main_clk rising to falling edge, 4.630 ns). The change does not touch
+`jt49`: its tone counter closes in v1.1 only because the design is placed
+differently, and it is the worst full-cycle path (`regarray` -> `count`,
++0.404 ns in P1 / R2). A version of `jt49_div` without that ripple exists
+(exact for every input) but would need a fork of the jt49 submodule, and it
+is not needed now.
 
 So check "Numbers of Setup Violated Endpoints" after every rebuild: any
 change, in the meter or anywhere else, can move the placement into a failing
@@ -695,7 +706,8 @@ The details are in [MOONSOUND.md](MOONSOUND.md). In short:
   with the MSX off: New Juice resets its video PLL and the transmitter with
   the MSX. The VU meter has not been seen on a screen yet.
 - Timing closes with +0.368 ns in v1.1, and in all six place-and-route
-  combinations (+0.003 to +0.404 ns); the chip is at 97 % of CLS, so any
+  combinations (worst setup +0.003 to +0.368 ns, full-cycle paths up to
+  +0.404 ns); the chip is at 97 % of CLS, so any
   rebuild has to be checked, see [Resources and timing](#resources-and-timing).
 
 ## Licenses

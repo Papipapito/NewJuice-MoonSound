@@ -2,8 +2,9 @@
 // License note (New Juice MoonSound fork): this wrapper adapts
 // cartridge_opl3.sv of MangOPL4 / tnCartWonder,
 //   BSD 3-Clause License, Copyright (c) 2026, Jokin Miragaia.
-// MoonTANG changes are GPL-3.0. See src/moonsound/NOTICE.md. Unchanged from
-// MoonTANG commit 5400f15 below this note.
+// MoonTANG changes are GPL-3.0. See src/moonsound/NOTICE.md. Below this note:
+// the code of MoonTANG commit 880e394 (= d67c430) without its license
+// paragraph.
 // ----------------------------------------------------------------------------
 // ============================================================================
 // opl4fm.v — MoonSound FM (OPL3/YMF262 del YMF278B) para MSXimus (_82)

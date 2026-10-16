@@ -66,7 +66,8 @@ licenses are in [FORK.md](FORK.md).
 
 Resource usage is in [FORK.md](FORK.md#resources-and-timing), and so is the
 timing of v1.1 (the registered bus decode, all six place-and-route
-combinations closing, +0.003 to +0.404 ns). Timing of the
+combinations closing, worst setup +0.003 to +0.368 ns, full-cycle paths up
+to +0.404 ns). Timing of the
 sources before the VU meter (`16a9664`) was measured with both tool versions and every place-and-route
 option the tools accept for this device (Gowin silently turns Place 3 and 4
 into Place 0 here, and Place 2 gives exactly the same placement as Place 1, so
@@ -89,7 +90,8 @@ in New Juice), so these reports say nothing about them; they were measured
 apart from the SDF (see below). Those
 sources were built with `Place_Option = 1`, `Route_Option = 2`
 (`impl/new-juice_process_config.json`), the best of that sweep with both
-versions; with the VU meter the project uses Place 0 / Route 1 (below).
+versions; X3, with the VU meter, used Place 0 / Route 1 (below), and since
+v1.0 (`aa24a00`) the project is at Place 1 / Route 2 again.
 With 1.9.12 P1/R2 the other clocks have, as Fmax against the
 constraint: opl4_clk54 95.2 / 54 MHz, PCM engine (opl4_clk_eng) 41.5 / 36 MHz,
 clkin (OPM, OPLL, HDMI pixels) 53.9 / 27 MHz, cpu_clk 67.4 / 3.58 MHz.
@@ -110,8 +112,8 @@ meter, worst setup slack (main_clk) and violated setup / hold endpoints:
 X3 is X2 with one more stage in the meter's frame-tick synchronizer; it is
 the only variant tried that closes every Place 0-1 / Route 1-2 combination
 and 1.9.11.03 (the others, and why this is placement luck and not a fix, are
-in [FORK.md](FORK.md#resources-and-timing)). The project is now set to
-Place 0 / Route 1 (+0.027 ns). Logic 86-88 %, CLS 97-98 %. In every build
+in [FORK.md](FORK.md#resources-and-timing)). X3 set the project to
+Place 0 / Route 1 (+0.027 ns); v1.0 and v1.1 use Place 1 / Route 2. Logic 86-88 %, CLS 97-98 %. In every build
 the 25 worst setup paths are New Juice's own (`mp_debouncer` through the
 slot decode to `flash_roms`, `linear_rom`, `super_megaram`, `sdram_mapper`
 and the debugger, and the tone counters of `jt49`); none touches the meter,
@@ -175,7 +177,7 @@ Results on this branch (WSL Ubuntu-24.04, Icarus 12, sv2v):
 
 | Bench | Result |
 |---|---|
-| Arbiter with the real chain, Z80 at 3.58 / 5.37 / 7.16 MHz, 24 voices (`blocks/run_blocks.sh arb`, 12 runs) | 12/12 PASS: no CPU command lost, no wrong data on either side. CPU read `cmd_en`->ack 93 ns without the MoonSound; with it at most 102 ns (3.58 MHz) and 139 ns (5.37 / 7.16 MHz); without the CPU-read hint it was 167-176 ns. PCM output rate 1.011 in all normal cases; 0.727 with 24 voices of 16-bit samples at high pitch (v1.1; v1.0 0.71-0.72) |
+| Arbiter with the real chain, Z80 at 3.58 / 5.37 / 7.16 MHz, 24 voices (`blocks/run_blocks.sh arb`, 12 runs) | 12/12 PASS: no CPU command lost, no wrong data on either side. CPU read `cmd_en`->ack 93 ns without the MoonSound; with it at most 102 ns (3.58 MHz) and 139 ns (5.37 / 7.16 MHz); without the CPU-read hint it was 167-176 ns. PCM output rate 1.000 in all normal cases; 0.71-0.72 with 24 voices of 16-bit samples at high pitch (unchanged from v1.0) |
 | Refresh with the Z80 stopped 70 ms (`refresh`) | PASS: one refresh every 7.8 us, no decayed row; negative control (own refresh off) PASS: the model reports 6838 decayed rows |
 | Memory map (`map`) | 16/16 PASS (also the read-back of FCh-FFh: the register as written) |
 | I2S transmitter (`i2s`) | PASS: every word exact through an I2S receiver, both halves equal, a left-justified receiver does not decode it, DIN/WS 315 ns setup / 333 ns hold around the rising BCLK edge, 48.2 kHz. The previous `audio_drive` fails three of the four checks (8/64 words, 9.26 ns hold) |
@@ -212,7 +214,7 @@ Results on this branch (WSL Ubuntu-24.04, Icarus 12, sv2v):
   a stale byte from 7Fh; `RD_MIRROR = 1` in `moonsound_nj.sv` would serve
   the two registers that software reads from the bus side instead.
 - With 24 voices of 16-bit samples at high pitch the wavetable engine keeps
-  up at about 73 % of its rate (MoonTANG: 80 %); ordinary music runs at
+  up at about 72 % of its rate (MoonTANG: 80 %); ordinary music runs at
   100 %.
 - The OPL4 joins the mix at the level of the OPLL; the balance against the
   other New Juice sources has to be set by ear on real hardware.

@@ -1,10 +1,26 @@
 # MoonSound (OPL4) for New Juice: sources and licenses
 
 This folder holds the MoonSound (Yamaha YMF278B / OPL4) used by the New Juice
-MoonSound fork, and the VU meter it shows on HDMI. Except for two license
-headers and `vu_screen.v` (noted below) and the New Juice files
+MoonSound fork, and the VU meter it shows on HDMI. v1.0 took its files from
+MoonTANG commit `5400f15` (05/10/2026). v1.1 (16/10/2026) changed four of
+them:
+
+- `opl3/calc_phase_inc.sv`, `opl3/envelope_generator.sv` and
+  `opl3/vibrato.sv` are MoonTANG's of commit `2e004e8` (the same in
+  `d67c430`);
+- `opl4fm.v` is the code of MoonTANG commit `880e394` (the same in
+  `d67c430`) without MoonTANG's license paragraph, which the BSD-3 notice
+  below replaces;
+- `opl4_pcm.v` is MoonTANG's of commit `2e004e8` without its sample-RAM
+  watermark (`sample_used_*`), which nothing here uses;
+- `opl4wave/ymf278b_gowin.v` is not MoonTANG's: it is the wavetable engine
+  of MSXimus Z Z1.2.10 (branch `zynq`, commit `ce37b68`; the engine last
+  changed in `ab115c5`).
+
+Apart from these, the changes noted below (license headers,
+`opl3/opl3_pkg.sv`, `vu_screen.v`) and the New Juice files
 (`moonsound_nj.sv`, `nj_sdram_arb.v`, `vu_meter_nj.v`), every file is a
-verbatim copy of MoonTANG commit `5400f15` (05/10/2026). Per-file headers are
+verbatim copy of MoonTANG commit `5400f15`. Per-file headers are
 authoritative; keep them intact.
 
 | Component | Files | Author / project | License |
@@ -24,8 +40,10 @@ authoritative; keep them intact.
 | VU level meter (does what MoonTANG's `vu_meter.v` does, with less logic) | `vu_meter_nj.v` | Albert "Papipapito" with Claude | GPL-3.0 |
 
 Changes in this fork: license headers added to `flash_rw.v` (the BSD-2
-notice of the WonderTANG `flash.v` it derives from) and `opl4fm.v` (the BSD-3
-notice of the MangOPL4 wrapper it adapts), with the code below them unchanged;
+notice of the WonderTANG `flash.v` it derives from, with the code below it
+unchanged) and `opl4fm.v` (the BSD-3 notice of the MangOPL4 wrapper it
+adapts, in place of MoonTANG's license paragraph; the code below it is
+MoonTANG's, see above);
 `opl3/opl3_pkg.sv` retuned from 27 to 36 MHz (CLK_FREQ, CLK_DIV_COUNT and
 the two timer tick counts; marked in the file); and `vu_screen.v`, whose
 title, subtitle and footer became parameters and whose two text tables
