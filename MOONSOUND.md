@@ -7,6 +7,16 @@ licenses are in [FORK.md](FORK.md).
 
 ## How it is built in
 
+- The MoonSound itself (v1.1): the OPL4 of MSXimus Z Z1.2.10. The wave engine
+  (`opl4wave/ymf278b_gowin.v`, body byte-identical to MSXimus Z) attenuates
+  each of its 24 voices 15 dB before adding them, interpolates TL with
+  `LD=0`, has the YMF278B's envelope rates and attack, stops the envelope at
+  -60 dB and stops reading memory for idle voices, implements DAMP and
+  pseudo-reverb, DL in 3 dB steps, panning in -3 dB steps, saturates the
+  level sum, keeps CPU reads through `7Fh` off the other voices, resets the
+  LFO of the right voice, has exact LFO rates and starts with F8 = 1Bh. The
+  OPL3 FM has the YMF262's vibrato and tremolo; its read-back follows the
+  chip's single address latch.
 - `src/moonsound/moonsound_nj.sv`: the MoonSound. The bus comes from New
   Juice's debounced signals; reads of C4h-C7h / 7Eh-7Fh join New Juice's data
   mux and /BUSDIR; IN 7Fh holds the Z80 with /WAIT until the engine answers
@@ -28,8 +38,10 @@ licenses are in [FORK.md](FORK.md).
   with main_clk.
 - The SPI flash belongs to New Juice's ROM loader until its ROMs are copied,
   then to the YRW801 loader.
-- Audio: the OPL4 (FM + wave, with the F8/F9 mix registers) joins New Juice's
-  mix at the OPLL level; the sum now saturates instead of wrapping around. The
+- Audio: the OPL4 (FM + wave, with the F8/F9 mix registers; F8 sets each FM
+  side with its own bits) joins New Juice's mix at the OPLL level, the wave
+  at MoonTANG's level per voice (x2.03125 after the engine's -15 dB, 23/64 of
+  a voice's scale); the sum now saturates instead of wrapping around. The
   I2S amplifier gets the mono mix at 48.2 kHz (108 MHz / 70 / 32); HDMI gets
   the stereo mix.
 - I2S framing: New Juice's `audio_drive` changed WS together with the MSB,
@@ -52,7 +64,9 @@ licenses are in [FORK.md](FORK.md).
 
 ## Resources and timing
 
-Resource usage is in [FORK.md](FORK.md#resources-and-timing). Timing of the
+Resource usage is in [FORK.md](FORK.md#resources-and-timing), and so is the
+timing of v1.1 (the registered bus decode, all six place-and-route
+combinations closing, +0.003 to +0.404 ns). Timing of the
 sources before the VU meter (`16a9664`) was measured with both tool versions and every place-and-route
 option the tools accept for this device (Gowin silently turns Place 3 and 4
 into Place 0 here, and Place 2 gives exactly the same placement as Place 1, so
@@ -161,22 +175,22 @@ Results on this branch (WSL Ubuntu-24.04, Icarus 12, sv2v):
 
 | Bench | Result |
 |---|---|
-| Arbiter with the real chain, Z80 at 3.58 / 5.37 / 7.16 MHz, 24 voices (`blocks/run_blocks.sh arb`, 12 runs) | 12/12 PASS: no CPU command lost, no wrong data on either side. CPU read `cmd_en`->ack 93 ns without the MoonSound; with it at most 102 ns (3.58 MHz) and 139 ns (5.37 / 7.16 MHz); without the CPU-read hint it was 167-176 ns. PCM output rate 1.000 in all normal cases; 0.71-0.72 with 24 voices of 16-bit samples at high pitch |
+| Arbiter with the real chain, Z80 at 3.58 / 5.37 / 7.16 MHz, 24 voices (`blocks/run_blocks.sh arb`, 12 runs) | 12/12 PASS: no CPU command lost, no wrong data on either side. CPU read `cmd_en`->ack 93 ns without the MoonSound; with it at most 102 ns (3.58 MHz) and 139 ns (5.37 / 7.16 MHz); without the CPU-read hint it was 167-176 ns. PCM output rate 1.011 in all normal cases; 0.727 with 24 voices of 16-bit samples at high pitch (v1.1; v1.0 0.71-0.72) |
 | Refresh with the Z80 stopped 70 ms (`refresh`) | PASS: one refresh every 7.8 us, no decayed row; negative control (own refresh off) PASS: the model reports 6838 decayed rows |
 | Memory map (`map`) | 16/16 PASS (also the read-back of FCh-FFh: the register as written) |
 | I2S transmitter (`i2s`) | PASS: every word exact through an I2S receiver, both halves equal, a left-justified receiver does not decode it, DIN/WS 315 ns setup / 333 ns hold around the rising BCLK edge, 48.2 kHz. The previous `audio_drive` fails three of the four checks (8/64 words, 9.26 ns hold) |
 | New Juice's OPLL without sv2v (`opll`) | PASS (+-4085) |
-| Whole board (`board/run_board.sh`) | 76/76 PASS: boot with New Juice's start-up test and ROM copy through the arbiter, YRW801 copy (synthetic 4 KB) and checksum, FM status/register read-back/timer /INT, wave ID and memory through 7Eh/7Fh with /WAIT, wave RAM at SDRAM 0x700000, nothing above 1 MB, 2 MB mapper, Super-MegaRAM, Nextor ROM, LINEAR mode, OPLL writes, PCM and FM to the I2S amplifier at 48.2 kHz decoded as I2S with both halves of every frame equal and every word exactly the mix sample, the mono mix saturating at 7FFFh/8000h, the OPL4 releasing the bus at the same time as New Juice's own ports (10 ns after the design's /RD, both), YRW801 kept across an MSX /RESET, no illegal SDRAM command, no decayed row; section O: bus timing at the slot pins with the Z80's timing at 3.58 / 5.37 / 7.16 MHz (checked at 3.58 MHz, measured at the others, figures under Known limits) |
-| Whole board against another revision (`run_board.sh diff`, REF = a git revision, default `4730f9c`) | 2/2 PASS on `2bbd313` against X3 (`4730f9c`): 1941 bus cycles each, every byte, wait state and bus event (DATADIR, /BUSDIR, data at the slot, /WAIT) at the same time, shift 0.0 ns. Against X4 (`cd044ab`) it reported the IN 7Fh wait states lost at 5.37 MHz and every event one or two 108 MHz clocks later |
+| Whole board (`board/run_board.sh`) | 76/76 PASS: boot with New Juice's start-up test and ROM copy through the arbiter, YRW801 copy (synthetic 4 KB) and checksum, FM status/register read-back/timer /INT, wave ID and memory through 7Eh/7Fh with /WAIT, wave RAM at SDRAM 0x700000, nothing above 1 MB, 2 MB mapper, Super-MegaRAM, Nextor ROM, LINEAR mode, OPLL writes, PCM and FM to the I2S amplifier at 48.2 kHz decoded as I2S with both halves of every frame equal and every word exactly the mix sample, the mono mix saturating at 7FFFh/8000h, the OPL4 releasing the bus at the same time as New Juice's own ports (10 ns after the design's /RD, both), YRW801 kept across an MSX /RESET, no illegal SDRAM command, no decayed row; section O: bus timing at the slot pins with the Z80's timing at 3.58 / 5.37 / 7.16 MHz (checked at 3.58 MHz, measured at the others, figures under Known limits). Levels in v1.1: one wave voice 5702 from the engine (v1.0 32258, before the -15 dB per voice), 11582 at the amplifier (v1.0 16129: -2.9 dB, MoonTANG's 23/64); FM 4101, at the amplifier x0.375 by F8 = 1Bh |
+| Whole board against another revision (`run_board.sh diff`, REF = a git revision, default `4730f9c`) | v1.1 (`0253221`): 2/2 PASS against the commit before the timing change (`5685160`) and against v1.0 (`aa24a00`): 1941 bus cycles each, every byte, wait state and bus event (DATADIR, /BUSDIR, data at the slot, /WAIT) at the same time, every shift +0.000 ns. Earlier, 2/2 PASS on `2bbd313` against X3 (`4730f9c`), shift 0.0 ns; against X4 (`cd044ab`) it reported the IN 7Fh wait states lost at 5.37 MHz and every event one or two 108 MHz clocks later |
 | Whole board, flash without YRW801 (`run_board.sh blank`) | 12/12 PASS: the checksum flags the image and the LED flashes |
-| Whole board with HDMI (`run_board.sh hdmi`, three simulations, about 36 minutes) | 5/5 PASS (32/32 checks): New Juice starts the video PLL after the MSX /RESET; through the verification receiver, 1036800 of 1036800 pixels are the ones sent; the two VU frames are, pixel for pixel, `vu_check.py`'s picture (FM 17/0, wave 16/24 with the wave panned 12 dB down on the left, out 20/24 segments), and the levels and peak marks drawn are the ones an independent model of the meter gives from each bar's own source, in both frames; with the FM muted near the end of the first frame, the model and the meter agree in the second that the FM L bar goes down to 16 and OUT L to 19 with their peak marks held at 17 and 20 (on the screen the two frames are the same picture: each bar's top segment is under its own peak mark); the debugger frame is its terminal, pixel for pixel (10318 white pixels, nothing of the meter); 2880 audio samples equal to the transmitted ones, left and right apart; 720x480p geometry, ACR (N 6272, CTS 29988), channel status (44.1 kHz, 16 bits), AVI (VIC 2), Audio InfoFrame, no protocol error. Negative controls: the FM R bar fed from wave R, and the wave L and wave R bars swapped, each fail on the meter check alone; `vu_check.py` rejects a level one segment off |
-| VU meter (`vu/run_vu.sh`) | 13/13 PASS: `vu_meter_nj` gives MoonTANG's `vu_meter` levels and peak marks in 1400 of 1400 random frames, with the reference's frame toggle one clock late for the fork's extra synchronizer stage (and a HOLD 44 mutant fails); the screen with the fork's texts, through `hdmi.sv`, is pixel for pixel `vu_check.py`'s picture (and a level one segment off is rejected), with YRW801 OK and MSX OK and also with YRW801 `...`, `ERROR`, `NO VALIDA` and MSX `--`. With `VG=` the X3 netlist: its three block-RAM ROMs hold what the simulation holds (512 + 128 + 512 entries, and a flipped bit is caught); with `GL=` a 1.9.12.03 synthesis netlist of the screen alone (`vu/syn/run_syn.sh`) draws the same frame, pixel for pixel (and with no netlist both netlist checks fail) |
+| Whole board with HDMI (`run_board.sh hdmi`, three simulations, about 32 minutes) | 5/5 PASS (32/32 checks): New Juice starts the video PLL after the MSX /RESET; through the verification receiver, 1036800 of 1036800 pixels are the ones sent; the two VU frames are, pixel for pixel, `vu_check.py`'s picture (v1.1: FM 11/0, wave 14/22 with the wave panned 12 dB down on the left, panpot 4 with the -3 dB/step law, out 17/22 segments; v1.0 had 17/0, 16/24 and 20/24 with panpot 1 at 12 dB per step and F8 = 0), and the levels and peak marks drawn are the ones an independent model of the meter gives from each bar's own source, in both frames; with the FM muted near the end of the first frame, the model and the meter agree in the second that the FM L bar goes down to 10 and OUT L to 16 with their peak marks held at 11 and 17; the debugger frame is its terminal, pixel for pixel (10318 white pixels, nothing of the meter); 2880 audio samples equal to the transmitted ones, left and right apart; 720x480p geometry, ACR (N 6272, CTS 29988), channel status (44.1 kHz, 16 bits), AVI (VIC 2), Audio InfoFrame, no protocol error. Negative controls: the FM R bar fed from wave R, and the wave L and wave R bars swapped, each fail on the meter check alone; `vu_check.py` rejects a level one segment off |
+| VU meter (`vu/run_vu.sh`) | 13/13 PASS (v1.1): `vu_meter_nj` gives MoonTANG's `vu_meter` levels and peak marks in 1400 of 1400 random frames, with the reference's frame toggle one clock late for the fork's extra synchronizer stage (and a HOLD 44 mutant fails); the screen with the fork's texts (footer `NEW JUICE MOONSOUND V1.1 2026-10-16`), through `hdmi.sv`, is pixel for pixel `vu_check.py`'s picture (and a level one segment off is rejected), with YRW801 OK and MSX OK and also with YRW801 `...`, `ERROR`, `NO VALIDA` and MSX `--`. With `VG=` the v1.1 synthesis netlist: its three block-RAM ROMs hold what the simulation holds (and a flipped bit is caught); with `GL=` a 1.9.12.03 synthesis netlist of the screen alone (`vu/syn/run_syn.sh`) draws the same frame, pixel for pixel. Give both as absolute paths |
 
 ## Known limits
 
 - On the board only the boot has been tried, on one MSXBOOK: the versioned
   bitstream (X1, sources of `f3e4a2c`) boots, the build of `16a9664` does
-  not; X3, with the VU meter, has not been tried; see
+  not; X3, v1.0 and v1.1 have not been tried; see
   [FORK.md](FORK.md#board-results). Everything else above comes from
   simulation and from the Gowin reports.
 - Franky is gone: SMS games and the sound scope no longer work. The mapper is
@@ -187,7 +201,7 @@ Results on this branch (WSL Ubuntu-24.04, Icarus 12, sv2v):
   MoonSound voices playing (the arbiter keeps wave fetches out of the way of
   a starting CPU read): 200/200 reads right at 3.58 MHz (needed by 459 ns)
   and at 5.37 MHz (needed by 282 ns, 47 ns to spare); at 7.16 MHz (needed by
-  199 ns) about half fail, 99/200 without the MoonSound and 97/200 with it:
+  199 ns) about half fail, 97/200 without the MoonSound and 96/200 with it (v1.1; the v1.0 notes said 99 and 97, the logs of that time 97 and 96):
   New Juice does not reach a 7.16 MHz Z80 without /WAIT by itself.
 - IN 7Fh holds the Z80 with /WAIT. /WAIT reaches the slot at most 190.0 ns
   after /IORQ at 3.58 MHz (sampled at 349 ns: 89 ns to spare with the Z80's
@@ -198,7 +212,7 @@ Results on this branch (WSL Ubuntu-24.04, Icarus 12, sv2v):
   a stale byte from 7Fh; `RD_MIRROR = 1` in `moonsound_nj.sv` would serve
   the two registers that software reads from the bus side instead.
 - With 24 voices of 16-bit samples at high pitch the wavetable engine keeps
-  up at about 72 % of its rate (MoonTANG: 80 %); ordinary music runs at
+  up at about 73 % of its rate (MoonTANG: 80 %); ordinary music runs at
   100 %.
 - The OPL4 joins the mix at the level of the OPLL; the balance against the
   other New Juice sources has to be set by ear on real hardware.
@@ -206,8 +220,9 @@ Results on this branch (WSL Ubuntu-24.04, Icarus 12, sv2v):
   resets its video PLL and the transmitter with the MSX (unchanged). The VU
   meter has been simulated with the whole design and an HDMI receiver, not
   seen on a screen yet.
-- The build with the VU meter (X3) closes timing by 4 to 27 ps with
-  1.9.12.03; any rebuild has to be checked.
+- v1.1 closes timing with +0.368 ns (1.9.12.03, P1 / R2) and in all six
+  place-and-route combinations; the chip is at 97 % of CLS, so any rebuild
+  has to be checked.
 - Unchanged New Juice behaviour, seen in the bench at the slot pins: the
   debugger's /WAIT on a held M1 fetch comes 13.4 / 55.1 / 65.4 ns after
   /MREQ at 3.58 / 5.37 / 7.16 MHz (126 ns, 1 ns and -46 ns to spare with

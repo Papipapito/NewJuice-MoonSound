@@ -18,6 +18,31 @@ Experimental. It builds without timing violations with Gowin 1.9.12.03 and
 1.9.11.03 Education, and every simulation bench passes (`tools/sim/README.md`;
 results in [MOONSOUND.md](MOONSOUND.md)).
 
+**v1.1 (16 Oct 2026, sources `0253221`)**, the bitstream now in `impl/pnr/`:
+
+- The MoonSound is the OPL4 of MSXimus Z Z1.2.10. The wave engine behaves like
+  the YMF278B measured against openMSX: headroom for the 24 voices, TL fades
+  with `LD=0`, the envelope rates and attack of the chip, an envelope that
+  stops at -60 dB, idle voices that stop reading wave memory, DAMP and
+  pseudo-reverb, DL in 3 dB steps, panning in -3 dB steps, a level sum that
+  saturates instead of wrapping (the 2.7 s of noise when loading songs in
+  *Dutch Moonsound Veterans HDD*), register reads through `7Fh` that no longer
+  disturb the other voices, exact LFO rates and F8 = 1Bh after reset. The FM
+  gets the YMF262's vibrato and tremolo and the single address latch of the
+  chip for its read-back. Most of it is what MoonTANG 1.0.4beta and MSXimus
+  60K 3.8.4 carry, both tried on hardware; the small Z1.2.10 changes
+  (envelope stop, idle detection, DL=0, LFO rates) and the F8 fix below are
+  so far checked only in simulation (MSXimus Z Z1.2.10 awaits its board test).
+- The wave enters the mix at MoonTANG's level per voice (23/64, 2.9 dB below
+  v1.0), and F8 sets each FM side with its own bits (the right side used the
+  left bits).
+- A timing change in New Juice's bus decode gives main_clk its margin back
+  without a clock of latency: see [Resources and timing](#resources-and-timing).
+  It builds with **+0.368 ns** of worst setup slack (P1 / R2), and all six
+  place-and-route combinations close.
+- Every simulation bench passes, and the whole-board bench gives the same
+  1941 bus cycles as v1.0, event by event. It has not been tried on a board.
+
 First board tests (5 Oct 2026, one WonderTANG 2.02b in an MSXBOOK, whose
 OCM-PLD has its own 4 MB mapper): a build of this branch's sources
 (`f3e4a2c`, the bitstream now versioned in `impl/pnr/`) **boots**; the one
@@ -116,12 +141,17 @@ reformatted.
 | `a83092a`, `8004964` | Docs: board results and the SDRAM interface; the bitstream X1 versioned |
 | `437b716` | HDMI: VU meter on the HDMI picture when the debugger is off |
 | `fc52a74` | Benches: VU meter (against MoonTANG's, through `hdmi.sv`, ROMs and netlist) and HDMI on the board bench |
+| `5685160` | MoonSound: the OPL4 of MSXimus Z Z1.2.10 (wave engine like the chip, FM vibrato/tremolo, single FM latch, F8 per side, wave at MoonTANG's level) |
+| `0253221` | Timing: address decodes registered with the bus snapshot of `mp_debouncer` (no clock of latency; formally equivalent) |
 
 New Juice files touched: `src/top.v`, `src/top.sdc`, `new-juice.gprj`,
 `src/rpll/rpll_main.v` (CLKOUTD3 brought out), `src/sdram_mapper.v`,
 `src/flash_roms.v`, `src/linear_rom.v`, `src/super_megaram.v`,
 `src/audio_drive.v` and `src/top.v` again for the VU meter (only the picture
-multiplexer of HDMI, the meter and its screen), `Makefile` (new `yrw801` target),
+multiplexer of HDMI, the meter and its screen), `src/mp_debouncer.v` and
+`src/slot_expander.v`, and `src/sdram_mapper.v`, `src/linear_rom.v`,
+`src/flash_roms.v` and `src/top.v` again for the timing change of v1.1
+(`0253221`), `Makefile` (new `yrw801` target),
 `impl/new-juice_process_config.json` (Route option 2), `.gitignore` and a
 three-line notice at the top of `README.md`. New: `src/moonsound/`,
 `tools/sim/`, `MOONSOUND.md`, this file and `docs/`.
@@ -185,17 +215,17 @@ rate and timers were retuned for 36 MHz (`src/moonsound/opl3/opl3_pkg.sv`).
 
 GW2AR-LV18QN88C8/I7 (Tang Nano 20K).
 
-| | New Juice (author's bitstream, Gowin 1.9.11.03 Education) | X1: sources of `f3e4a2c`, 1.9.12.03, P1 / R2 (the versioned bitstream, boots) | X3: with the VU meter, sources of `aa2c2eb`, 1.9.12.03, P0 / R1 | X3 sources, 1.9.11.03 Education, P1 / R2 |
-|---|---|---|---|---|
-| Logic | 12546 / 20736 (61 %) | 17160 (83 %) | 17807 (86 %) | 18046 (88 %) |
-| CLS | 9002 / 10368 (87 %) | 9893 (96 %) | 10071 (98 %) | 10030 (97 %) |
-| Logic registers (FF) | 8157 | 9531 | 9923 | 9565 |
-| BSRAM | 46 / 46 | 31 / 46 | 34 / 46 | 34 / 46 |
-| DSP | 2 | 3.5 | 3.5 | 3.5 |
-| PRIMARY / LW clocks | 3 / 8, 8 / 8 | 5 / 8, 8 / 8 | 5 / 8, 8 / 8 | 5 / 8, 8 / 8 |
-| rPLL | 2 / 2 | 2 / 2 | 2 / 2 | 2 / 2 |
-| Violated setup / hold endpoints | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
-| Worst setup slack (main_clk, 108 MHz) | +0.065 ns | **+0.832 ns** | **+0.027 ns** | +0.605 ns |
+| | New Juice (author's bitstream, Gowin 1.9.11.03 Education) | X1: sources of `f3e4a2c`, 1.9.12.03, P1 / R2 (the versioned bitstream, boots) | X3: with the VU meter, sources of `aa2c2eb`, 1.9.12.03, P0 / R1 | X3 sources, 1.9.11.03 Education, P1 / R2 | v1.1: sources of `0253221`, 1.9.12.03, P1 / R2 (the versioned bitstream) |
+|---|---|---|---|---|---|
+| Logic | 12546 / 20736 (61 %) | 17160 (83 %) | 17807 (86 %) | 18046 (88 %) | 18063 (88 %) |
+| CLS | 9002 / 10368 (87 %) | 9893 (96 %) | 10071 (98 %) | 10030 (97 %) | 10046 (97 %) |
+| Logic registers (FF) | 8157 | 9531 | 9923 | 9565 | 10014 |
+| BSRAM | 46 / 46 | 31 / 46 | 34 / 46 | 34 / 46 | 34 / 46 |
+| DSP | 2 | 3.5 | 3.5 | 3.5 | 3.5 |
+| PRIMARY / LW clocks | 3 / 8, 8 / 8 | 5 / 8, 8 / 8 | 5 / 8, 8 / 8 | 5 / 8, 8 / 8 | 5 / 8, 8 / 8 |
+| rPLL | 2 / 2 | 2 / 2 | 2 / 2 | 2 / 2 | 2 / 2 |
+| Violated setup / hold endpoints | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Worst setup slack (main_clk, 108 MHz) | +0.065 ns | **+0.832 ns** | **+0.027 ns** | +0.605 ns | **+0.368 ns** |
 
 Figures as each build's `new-juice.rpt.txt` gives them (Gowin rounds the
 percentages up); registers are "Logic Register as FF" (the 66-69 I/O
@@ -255,6 +285,46 @@ Education, Place 1 / Route 2:
   clkin). A register stage on the bus inputs of New Juice was tried (X4)
   and reverted: it did not give the margin back, see
   [Tried and reverted: a register stage on the bus inputs](#tried-and-reverted-a-register-stage-on-the-bus-inputs-x4).
+
+### v1.1: the bus decode registered with the snapshot
+
+With the engine of v1.1 (+270 LUTs, the chip at 97 % of CLS) the same paths
+failed: -0.222 to -1.432 ns depending on Place / Route, with the same sources
+placed the same way every time (Gowin is deterministic here: changing texts,
+`Replicate_Resources`, `Route_Maxfan` or `Clock_Route_Order` gives the same
+three results). They are New Juice's own: from the snapshot of
+`mp_debouncer` (`latched`) to the start decision and the state of
+`sdram_mapper`, `flash_roms`, `linear_rom` and `slot_expander`, where synthesis
+shared the 16-bit address comparisons (FFFFh, 3FF0h-3FF1h, 7C00h-7EFFh)
+between modules in chains of 3 to 5 LUTs spread over the chip.
+
+`mp_debouncer` now publishes three flags (`addr_is_ffff`, `addr_is_sfg_io`,
+`addr_is_dos2_overlay`), registered on the same edge and from the same
+`debounced` value as the address (A[7:0] and A[15:8] are final before scan
+phase 5), with the reset values of FFFFh: in every clock each flag equals its
+comparison on `addr`, so nothing changes on the bus and no clock of latency is
+added (the register stage of X4, below, cost one). The consumers use the
+flags. Proven: formal equivalence (yosys, PDR / `equiv_induct`) of
+`mp_debouncer` (outputs unchanged, flags equal to the comparisons in every
+clock) and of the four consumers against the originals, with three mutants
+that fail; the board bench in `diff` mode gives the same 1941 bus cycles,
+byte for byte, as the commit before the change and as v1.0. It was chosen
+among three independent designs (registered decodes; local retiming in the
+consumers; SDC multicycle paths, rejected as unsafe). Cost: about 90 LUTs.
+
+| Place / Route (1.9.12.03) | Before (`5685160`) | v1.1 (`0253221`) |
+|---|---|---|
+| 0 / 0 | -0.472 ns, 36 endpoints | +0.003 ns |
+| 0 / 1 | -0.854 ns, 19 | +0.100 ns |
+| 0 / 2 | -0.222 ns, 19 | +0.317 ns |
+| 1 / 0 | not built | +0.039 ns |
+| 1 / 1 | -1.432 ns, 11 | +0.369 ns |
+| **1 / 2** (project setting, the versioned bitstream) | -1.317 ns, 13 | **+0.404 ns** (+0.368 ns on a half-cycle path) |
+
+In v1.1 the worst full-cycle path is the PSG's tone counter again (`jt49`,
+`regarray` -> `count`, +0.404 ns); a version of `jt49_div` without that
+ripple exists (exact for every input) but would need a fork of the jt49
+submodule, and it is not needed now.
 
 So check "Numbers of Setup Violated Endpoints" after every rebuild: any
 change, in the meter or anywhere else, can move the placement into a failing
@@ -347,7 +417,7 @@ mode); with it on, the debugger terminal, as before:
 
 ![VU meter on HDMI](docs/img/vu_hdmi_nj.png)
 
-*The first VU frame of the board bench as its HDMI receiver took it from the cable (simulation, `tools/sim/board/run_board.sh hdmi`, X3 sources): FM on the left only, the wave panned 12 dB down on the left, OUT the whole mix. The design sends limited range (16-235); the picture has been converted to full range, as a TV shows it, so its black is not the 16 that goes down the cable.*
+*The first VU frame of the board bench as its HDMI receiver took it from the cable (simulation, `tools/sim/board/run_board.sh hdmi`, v1.1 sources): FM on the left only, the wave panned 12 dB down on the left, OUT the whole mix. The design sends limited range (16-235); the picture has been converted to full range, as a TV shows it, so its black is not the 16 that goes down the cable.*
 
 - Bars, 28 segments of 1.5 dB (the top one is full scale, the bottom one
   42 dB below), with a peak mark that stays 45 frames: **FM** L/R and
@@ -357,7 +427,7 @@ mode); with it on, the debugger terminal, as before:
 - **YRW801**: `...` while it is copied, `OK`, `NO VALIDA` (copied, but the
   checksum says it is not the YRW801) or `ERROR` (the copy failed).
   **MSX**: `OK` while the slot clock runs.
-- Footer: the build (`X3` and the date, a parameter in `src/top.v`).
+- Footer: the build (`V1.1` and the date, a parameter in `src/top.v`).
 
 How it is made (MoonTANG's screen and meter, adapted to a full chip):
 `src/moonsound/vu_screen.v` draws each pixel from the coordinates of the
@@ -401,6 +471,8 @@ mapper), with the same ROMs and YRW801 in the flash; only the bitstream at
 | X1 | `16a9664` without bit 7 = the sources of `f3e4a2c` | 1.9.12.03, 1 / 2 | `276425bea832b1272213ce9a55dcfe29` | **boots** |
 | X2 | `437b716` (X1 + the VU meter on HDMI) | 1.9.12.03, 1 / 2 | `81e3e381e6a8b95b9e7c1e295b34bfd9` | not tried; replaced by X3 |
 | X3 | `aa2c2eb` (X2 + one synchronizer stage) | 1.9.12.03, 0 / 1 | `33d413bd0bfa3a5ed947df8f0a4c3029` | not tried yet |
+| v1.0 | `aa24a00` (X3 sources, P1 / R2) | 1.9.12.03, 1 / 2 | `0b261af188f934a649f266cc85e60b2f` | not tried yet |
+| v1.1 | `0253221` (the OPL4 of MSXimus Z Z1.2.10, registered bus decode) | 1.9.12.03, 1 / 2 | `0bdb119e17487b38da281214b942aec1` | not tried yet |
 
 - The file first tried as "B3" was New Juice's own bitstream from upstream
   (its header says 1.9.11.03 Education; its MD5 is that of
@@ -540,17 +612,19 @@ make roms                                 # New Juice's Nextor and FM-PAC + SFG-
 make yrw801 YRW801=/path/to/yrw801.rom    # your own YRW801 image to flash 0x200000
 ```
 
-The repository carries the built v1.0 bitstream, as New Juice does:
-`impl/pnr/new-juice.fs` and `.bin`. The release uses the same outputs under
-the unambiguous names `NewJuice-MoonSound-v1.0.fs` and
-`NewJuice-MoonSound-v1.0.bin`; use the former in Gowin Programmer. The build
-was made with Gowin 1.9.12.03 on 8 Oct 2026 and reports 0 setup / 0 hold
-violated endpoints (worst main-clock slack +0.008 ns). `.gitattributes` keeps
+The repository carries the built v1.1 bitstream, as New Juice does:
+`impl/pnr/new-juice.fs` (md5 `0bdb119e17487b38da281214b942aec1`) and `.bin`
+(`398a6472735ed769b44e93df92691943`); use the `.fs` in Gowin Programmer
+([docs/FLASHING_V1.1.md](docs/FLASHING_V1.1.md) gives every address; from v1.0
+only the bitstream changes). The
+build was made with Gowin 1.9.12.03 on 16 Oct 2026 (Place 1 / Route 2) and
+reports 0 setup / 0 hold violated endpoints (worst main-clock slack
++0.368 ns). `.gitattributes` keeps
 both byte for byte, so a checkout reproduces their checksums.
 
 The older X1 build in [Board results](#board-results) is the one that booted
-on the MSXBOOK. v1.0 therefore remains an experimental release until the
-current HDMI/VU build has comparable board coverage.
+on the MSXBOOK. v1.1 therefore remains experimental until the current build
+has comparable board coverage.
 
 - `make reprogram` writes that file as it is, without building: only
   openFPGALoader is needed. This is what New Juice's README tells a new user
@@ -562,8 +636,8 @@ current HDMI/VU build has comparable board coverage.
   bitstream included. A rebuild of the same sources gives a different `.fs`
   (its header carries the build time), and another Gowin version places and
   routes it differently, so check its timing (see above) before committing it.
-  Today it builds X3 (with the VU meter) over X1: do not commit that
-  bitstream until X3 has booted on the board.
+  With the same sources and tool version it gives the same placement
+  (Gowin is deterministic here; only the build time in the header changes).
 
 `make` needs the Gowin IDE (`GOWIN_IDE=...` or `GW_SH=...`) and the
 programming targets need openFPGALoader, as in New Juice. Without the
@@ -590,7 +664,7 @@ or `openFPGALoader -b tangnano20k -f new-juice.fs`, and the YRW801 with
 ### The YRW801
 
 The MoonSound needs the Yamaha YRW801 wave ROM (2 MB). The v1.0 private
-release includes `yrw801.bin` at the explicit request and under the
+release included `yrw801.bin` (v1.1 uses the same image) at the explicit request and under the
 responsibility of the repository owner; it is not tracked in the source tree.
 It is written to flash at 0x200000. `.gitignore` keeps out any file with
 `yrw801` in its name, in any case and any folder (the loader's source
@@ -619,10 +693,10 @@ The details are in [MOONSOUND.md](MOONSOUND.md). In short:
   by ear on the board.
 - HDMI (picture and sound) drops with every MSX /RESET, and there is none
   with the MSX off: New Juice resets its video PLL and the transmitter with
-  the MSX. The VU meter (X3) has not been seen on a screen yet.
-- Timing closes with a few picoseconds to spare in the build with the VU
-  meter (X3): any rebuild has to be checked, see
-  [Resources and timing](#resources-and-timing).
+  the MSX. The VU meter has not been seen on a screen yet.
+- Timing closes with +0.368 ns in v1.1, and in all six place-and-route
+  combinations (+0.003 to +0.404 ns); the chip is at 97 % of CLS, so any
+  rebuild has to be checked, see [Resources and timing](#resources-and-timing).
 
 ## Licenses
 

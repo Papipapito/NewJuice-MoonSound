@@ -1,7 +1,7 @@
-> **NewJuice-MoonSound v1.0 (private, experimental):** Franky is replaced by
+> **NewJuice-MoonSound v1.1 (private, experimental):** Franky is replaced by
 > a MoonSound (OPL4) and the mapper is 2 MB. Read [FORK.md](FORK.md) before
-> using anything below. For the release files and exact external-flash
-> addresses, use the bilingual [v1.0 flashing guide](docs/FLASHING_V1.0.md).
+> using anything below. For the files and exact external-flash addresses,
+> use the bilingual [v1.1 flashing guide](docs/FLASHING_V1.1.md).
 
 # NEW JUICE Firmware for WonderTANG 2.02b
 
