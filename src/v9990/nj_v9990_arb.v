@@ -21,15 +21,18 @@
 //   ph 1   the core's EXEC
 //   ph 2   the core's request is visible here (RAM_OE_n / RAM_WE_n / RAM_RFSH_n)
 // Rules:
-//  - a_busy is 1 from the clock the request is visible, so A issues nothing
-//    new after it. A may still issue in that very clock (it decided one clock
-//    earlier): then V waits for that one operation. V's access itself is
-//    issued in the first clock with the controller idle and no A command.
-//  - Worst case for V: A writes at ph 2 (controller idle again at ph 10), V
-//    reads two words from ph 10, RAM_DOUT and RAM_ACK_n at ph 19, the core is
-//    back in its idle state at ph 20 = ph 0 of the next slot, one clock
-//    before its EXEC.
-//  - Worst case for A: one V access, 7 to 9 clocks.
+//  - The core's clients must see the result of an access before ph 20 (the
+//    v_timing of the next slot, when they give their next address): the
+//    core has to be back in its idle state by ph 18. A lost slot (not idle
+//    at the next EXEC) would be worse still.
+//  - a_busy is 1 in ph 19, 20 and 1, so A issues nothing in ph 20, 1 and 2,
+//    and from ph 2 on while a request of V is waiting. V's access is issued
+//    in the first clock with the controller idle and no A command.
+//  - Worst case for V: A writes at ph 19 (controller idle again at ph 7), V
+//    reads two words from ph 7, RAM_DOUT and RAM_ACK_n at ph 17, the core is
+//    back in its idle state at ph 18.
+//  - Worst case for A: the three closed clocks plus one V access (up to 9
+//    clocks).
 //  - R only starts with ph in 3..14, so that it is over before the next
 //    request of V, never with a request of V pending, and (unless overdue)
 //    never while a CPU read is announced by the slot pins.
@@ -211,7 +214,8 @@ module nj_v9990_arb #(
                            (v_addr[1:0] == 2'd2) ? {16'h0000, rd_q[31:16]} :
                                                    {24'h000000, rd_q[31:24]};
 
-    assign a_busy = s_busy | v_rw_req | rf_hold;
+    wire a_closed = (ph == 5'd19) || (ph == 5'd20) || (ph == 5'd1);
+    assign a_busy = s_busy | v_rw_req | rf_hold | a_closed;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin

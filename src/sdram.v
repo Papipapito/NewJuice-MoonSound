@@ -72,9 +72,11 @@ module sdram
     // V9990 fork: a second kind of access for the VRAM. One 32-bit word, or
     // two (v_dbl: col and col^1 of the same row, as tnCart's burst of two),
     // with a 4-bit mask per word. Issue v_rd / v_wr for one clock while
-    // busy = 0 and rd = wr = 0; v_addr, v_dbl, v_din* and v_dqm* must stay
-    // put until busy drops. A read gives its word(s) on dout32 while
-    // v_data_ready is 1 (one clock per word). The CPU port above is unchanged.
+    // busy = 0 and rd = wr = 0; v_addr, v_dbl, v_din* and v_dqm* are taken
+    // in that clock. A read gives its word(s) on dout32 while v_data_ready
+    // is 1: one clock per word, with an idle clock between the two, so that
+    // each word is followed by a released bus, like the CPU's single read.
+    // The CPU port above is unchanged.
     input             v_rd,
     input             v_wr,
     input             v_dbl,
@@ -110,8 +112,13 @@ reg  ff_data_ready;
 reg  ff_v_ready;
 reg  v_dbl_q;
 assign v_data_ready = ff_v_ready;
-wire [9:0] v_col0 = {2'b00, v_addr[7:0]};
-wire [9:0] v_col1 = {2'b00, v_addr[7:1], ~v_addr[0]};
+// operands of the V access, taken with the command: the access ends with
+// what was accepted even if the client is reset in the middle
+reg  [7:0]  v_col_q;
+reg  [31:0] v_din0_q, v_din1_q;
+reg  [3:0]  v_dqm0_q, v_dqm1_q;
+wire [9:0] v_col0 = {2'b00, v_col_q};
+wire [9:0] v_col1 = {2'b00, v_col_q[7:1], ~v_col_q[0]};
 
 assign SDRAM_A = FF_SDRAM_A;
 assign SDRAM_BA = FF_SDRAM_BA;
@@ -158,6 +165,9 @@ always @(posedge clk or negedge resetn) begin
         ff_data_ready <= 1'b0;
         ff_v_ready <= 1'b0;
         v_dbl_q <= 1'b0;
+        v_col_q <= 8'd0;
+        v_din0_q <= 32'd0; v_din1_q <= 32'd0;
+        v_dqm0_q <= 4'b1111; v_dqm1_q <= 4'b1111;
         dq_oen <= 1'b1;         // turn off DQ output
         dq_out <= {DATA_WIDTH{1'b0}};
         off <= 1'b0;
@@ -220,6 +230,9 @@ always @(posedge clk or negedge resetn) begin
                 FF_SDRAM_BA <= v_addr[20:19];
                 FF_SDRAM_A <= v_addr[18:8];
                 v_dbl_q <= v_dbl;
+                v_col_q <= v_addr[7:0];
+                v_din0_q <= v_din0; v_dqm0_q <= v_dqm0;
+                v_din1_q <= v_din1; v_dqm1_q <= v_dqm1;
                 state <= v_rd ? VREAD : VWRITE;
                 cycle <= 5'd1;
                 ff_busy <= 1'b1;
@@ -280,15 +293,16 @@ always @(posedge clk or negedge resetn) begin
                 state <= IDLE;
             end
 
-            // V9990 read: READ col, then (v_dbl) READ col^1; auto precharge
-            // on the last one. One word per clock on DQ from T_RCD+CAS.
+            // V9990 read: READ col, then (v_dbl) two clocks later READ col^1;
+            // auto precharge on the last one. The first word is on DQ at
+            // T_RCD+CAS and the second two clocks later.
             {VREAD, T_RCD}: begin
                 {FF_SDRAM_nRAS, FF_SDRAM_nCAS, FF_SDRAM_nWE} <= CMD_Read;
                 FF_SDRAM_A[10] <= ~v_dbl_q;
                 FF_SDRAM_A[9:0] <= v_col0;
                 FF_SDRAM_DQM <= 4'b0;
             end
-            {VREAD, T_RCD+5'd1}: if (v_dbl_q) begin
+            {VREAD, T_RCD+5'd2}: if (v_dbl_q) begin
                 {FF_SDRAM_nRAS, FF_SDRAM_nCAS, FF_SDRAM_nWE} <= CMD_Read;
                 FF_SDRAM_A[10] <= 1'b1;
                 FF_SDRAM_A[9:0] <= v_col1;
@@ -296,12 +310,17 @@ always @(posedge clk or negedge resetn) begin
             {VREAD, T_RCD+CAS}: begin
                 ff_v_ready <= 1'b1;
             end
-            {VREAD, T_RCD+CAS+5'd1}: if (!v_dbl_q) begin
+            {VREAD, T_RCD+CAS+5'd1}: begin
                 ff_v_ready <= 1'b0;
-                ff_busy <= 0;
-                state <= IDLE;
+                if (!v_dbl_q) begin
+                    ff_busy <= 0;
+                    state <= IDLE;
+                end
             end
             {VREAD, T_RCD+CAS+5'd2}: begin
+                ff_v_ready <= 1'b1;
+            end
+            {VREAD, T_RCD+CAS+5'd3}: begin
                 ff_v_ready <= 1'b0;
                 ff_busy <= 0;
                 state <= IDLE;
@@ -313,8 +332,8 @@ always @(posedge clk or negedge resetn) begin
                 {FF_SDRAM_nRAS, FF_SDRAM_nCAS, FF_SDRAM_nWE} <= CMD_Write;
                 FF_SDRAM_A[10] <= ~v_dbl_q;
                 FF_SDRAM_A[9:0] <= v_col0;
-                FF_SDRAM_DQM <= v_dqm0;
-                dq_out <= v_din0;
+                FF_SDRAM_DQM <= v_dqm0_q;
+                dq_out <= v_din0_q;
                 dq_oen <= 1'b0;
             end
             {VWRITE, T_RCD+5'd1}: begin
@@ -322,8 +341,8 @@ always @(posedge clk or negedge resetn) begin
                     {FF_SDRAM_nRAS, FF_SDRAM_nCAS, FF_SDRAM_nWE} <= CMD_Write;
                     FF_SDRAM_A[10] <= 1'b1;
                     FF_SDRAM_A[9:0] <= v_col1;
-                    FF_SDRAM_DQM <= v_dqm1;
-                    dq_out <= v_din1;
+                    FF_SDRAM_DQM <= v_dqm1_q;
+                    dq_out <= v_din1_q;
                 end else
                     dq_oen <= 1'b1;
             end

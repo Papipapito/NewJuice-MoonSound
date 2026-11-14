@@ -331,7 +331,10 @@ module T9990_RAM (
         STATE_WAIT_BUSY
     } state;
 
-    always_ff @(posedge CLK or negedge RESET_n) begin
+    // New Juice V9990 fork: synchronous reset. The requests feed the SDRAM
+    // arbiter, which is not reset with the core (MSX /RESET or the software
+    // reset of P#7): they must only change on a clock edge.
+    always_ff @(posedge CLK) begin
         if(!RESET_n) begin
             state <= STATE_WAIT_REQ;
             RAM_ADDR <= 0;

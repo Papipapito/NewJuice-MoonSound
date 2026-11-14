@@ -668,7 +668,7 @@ module tb_varb;
                 chk(n_lost == 0, "ninguna ranura perdida");
                 chk(n_bad_v == 0, "ninguna lectura de V erronea");
                 chk(fin_bad_a == 0 && fin_stray_a == 0 && fin_bad_v == 0, "la SDRAM final coincide con las sombras");
-                chk(worst_ph <= 20, "el core vuelve a WAIT_REQ como tarde en ph 20 (cabecera del arbitro)");
+                chk(worst_ph <= 18, "el core vuelve a WAIT_REQ como tarde en ph 18 (cabecera del arbitro)");
                 chk(bad_en21 == 0 && bad_en14 == 0 && bad_en25 == 0 && bad_vt == 0 && bad_vt21 == 0, "habilitaciones y v_timing correctos");
                 if (LOAD > 0) chk(n_vops > 1000 && n_chk_v > 100, "hay trafico de V medido");
             end
@@ -708,7 +708,7 @@ module tb_varb;
             chk(n_bad_a == 0 && n_xa == 0, "cada lectura de la CPU devuelve lo ultimo escrito en esa palabra");
             chk(mdl.n_err == 0 && mdl.n_stale == 0, "SDRAM sin ordenes ilegales ni filas caducadas");
             chk(fin_bad_a == 0 && fin_stray_a == 0 && fin_bad_v == 0, "la SDRAM final coincide con las sombras (nada de V fuera de la VRAM, nada de A dentro)");
-            chk(worst_ph <= 20, "el core vuelve a WAIT_REQ como tarde en ph 20 (cabecera del arbitro)");
+            chk(worst_ph <= 18, "el core vuelve a WAIT_REQ como tarde en ph 18 (cabecera del arbitro)");
             chk(mdl.max_ref_gap < 15600.0, "nunca pasan 15,6 us sin refresco");
             chk(bad_en21 == 0 && bad_en14 == 0 && bad_en25 == 0 && bad_vt == 0 && bad_vt21 == 0, "habilitaciones (6/4/7 en 30 ciclos) y v_timing (cada 20, 2 tras clk21m_en) correctos");
             if (LOAD > 0) chk(n_vops > 1000 && n_chk_v > 500, "hay trafico de V medido");

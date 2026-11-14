@@ -108,7 +108,9 @@ module T9990 #(
      ***************************************************************/
     reg rst_ff;
     wire rst_flag = rst_ff;
-    always_ff @(posedge CLK or negedge RESET_n)
+    // New Juice V9990 fork: synchronous (rst_flag resets the VRAM port, see
+    // t9990_ram.sv)
+    always_ff @(posedge CLK)
     begin
         if(!RESET_n) begin
             rst_ff <= 0;

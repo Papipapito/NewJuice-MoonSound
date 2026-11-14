@@ -91,7 +91,11 @@ module v9990_nj #(
 
     logic served;           // this I/O cycle has been shown to the core
     logic served_rd;        // ... and it was a read
-    logic [1:0] idle_cnt;   // clocks in a row with /RD and /WR idle (saturates at 3)
+    // New Juice's /RD and /WR come from input_debouncer, which changes at most
+    // every 6 clocks: a bounce that gets through lasts 6 clocks, so the
+    // re-arm waits for 8 idle clocks (V9990TANG: 3, after a 2-sample filter).
+    // Between two Z80 cycles they stay idle 24 clocks or more at 3.58 MHz.
+    logic [3:0] idle_cnt;   // clocks in a row with /RD and /WR idle (saturates at 8)
     logic CSR_n;
     logic CSW_n;
     always_ff @(posedge clk or negedge reset_n) begin
@@ -115,8 +119,8 @@ module v9990_nj #(
             end
 
             if(!rw_idle)                idle_cnt <= 0;
-            else if(idle_cnt != 2'd3)   idle_cnt <= idle_cnt + 2'd1;
-            if(rw_idle && idle_cnt >= 2'd2) begin
+            else if(idle_cnt != 4'd8)   idle_cnt <= idle_cnt + 4'd1;
+            if(rw_idle && idle_cnt >= 4'd7) begin
                 served    <= 0;
                 served_rd <= 0;
             end
