@@ -1,0 +1,46 @@
+BSD 3-Clause License
+
+Copyright (c) 2024, Shinobu Hashimoto
+Copyright (c) 2024, Albert Herranz
+Copyright (c) 2026, Papipapito
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+-------------------------------------------------------------------------------
+Exception: fpga/src/board/rev1/dvi_tx/ holds the DVI_TX IP of Gowin
+Semiconductor (encrypted netlist dvi_tx.v, configuration dvi_tx.ipc and the
+post-PnR simulation model dvi_tx.vo), generated with the Gowin IDE and carried
+as distributed by tnCart / tnCartWonder. It is vendor IP, not covered by the
+BSD 3-Clause License above. See UPSTREAM.md.
+
+Exception: the files in fpga/reports/ and its subfolders that are generated
+by the Gowin tools are not covered by the BSD 3-Clause License above: the
+resource reports *.rpt.txt and the timing reports *.tr, which keep the Gowin
+Semiconductor header and template text and are included unmodified; the SDF
+extracts *.sdf, which keep that header and copy unmodified cells and lines of
+the SDF written by Gowin, plus a comment; and the gw_sh logs *.log, which
+carry no header and are included unmodified. The other files in
+fpga/reports/ (check_build.txt, *.fs.txt, LEEME.txt, *.sdc) are covered by it.

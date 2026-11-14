@@ -600,26 +600,14 @@ module top
     wire native_sdram_data_ready;
     wire native_sdram_busy;
     wire native_sdram_enabled;
-    // MoonSound fork: SDRAM arbiter between the adapter and the controller
+    // V9990 fork: SDRAM arbiter (see sdram_arbiter_inst)
     wire arb_a_busy;
-    wire arb_a_data_ready;
-    wire arb_s_rd;
-    wire arb_s_wr;
     wire arb_s_refresh;
-    wire [22:0] arb_s_addr;
-    wire [15:0] arb_s_din;
-    wire [1:0] arb_s_wdm;
-    wire opl4_wv_req;
-    wire opl4_wv_we;
-    wire [21:0] opl4_wv_addr;
-    wire [7:0] opl4_wv_wdata;
-    wire [15:0] opl4_wv_dout;
-    wire opl4_wv_done;
-    wire opl4_rom_write_en;
-    wire [7:0] opl4_rd_data;
-    wire opl4_rd_active;
-    wire opl4_wait_n;
-    wire opl4_int_n;
+    wire arb_aux_capture;
+    wire [7:0] v9990_rd_data;
+    wire v9990_rd_active;
+    wire v9990_wait_n;
+    wire v9990_int_n;
     wire signed [15:0] opl4_mix_l;
     wire signed [15:0] opl4_mix_r;
     wire signed [15:0] opl4_mix_mono;
@@ -968,170 +956,11 @@ module top
             sms_reset_sync <= {sms_reset_sync[0], 1'b1};
     end
 
-    wire [9:0] hdmi_x;
-    wire [9:0] hdmi_y;
-    // MoonSound fork: the VU meter picture (see below), shown whenever the
-    // debugger does not own the screen
-    wire [23:0] vu_rgb;
+    // V9990 fork: New Juice's HDMI transmitter (720x480 only, with audio) is
+    // out. The picture is the V9990's, through V9990TANG's upscan and DVI
+    // output (720x480 or 720x576), inside v9990_nj below. sms_reset_n still
+    // releases the video logic, synchronized to the 27 MHz pixel clock.
 
-    wire sms_debug_terminal_pixel;
-    generate
-        if (SMS_DEBUGGER_ENABLED) begin : sms_debugger_enabled_impl
-            debug_trace_terminal debug_trace_terminal_inst (
-                .cpu_clk(main_clk),
-                .pixel_clk(clk),
-                .reset_n(board_reset_n),
-                .display_enabled(step_debug_enabled),
-                .debug_wait_n(step_debug_wait_n),
-                .bus_address(addr),
-                .bus_data(cd_in),
-                .m1_n(m1_n),
-                .merq_n(merq_n),
-                .rd_n(rd_n),
-                .wr_n(wr_n),
-                .rfsh_n(rfsh_n),
-                .x(hdmi_x),
-                .y(hdmi_y),
-                .subslot(debug_expanded_slot),
-                .mapper_page0(mapper_debug_page0),
-                .mapper_page1(mapper_debug_page1),
-                .mapper_page2(mapper_debug_page2),
-                .mapper_page3(mapper_debug_page3),
-                .megaram_bank0(megaram_debug_bank0),
-                .megaram_bank1(megaram_debug_bank1),
-                .megaram_bank2(megaram_debug_bank2),
-                .megaram_bank3(megaram_debug_bank3),
-                .megaram_type(megaram_debug_mode),
-                .pixel(sms_debug_terminal_pixel)
-            );
-        end else begin : sms_debugger_disabled_impl
-            assign sms_debug_terminal_pixel = 1'b0;
-        end
-    endgenerate
-
-    wire [7:0] hdmi_base_red = vu_rgb[23:16];
-    wire [7:0] hdmi_base_green = vu_rgb[15:8];
-    wire [7:0] hdmi_base_blue = vu_rgb[7:0];
-    // Debug mode owns the complete HDMI picture: white trace text on black.
-    // MoonSound fork: without Franky, the picture is the VU meter when the
-    // debugger is off.
-    wire [7:0] hdmi_red = step_debug_enabled ?
-                          {8{sms_debug_terminal_pixel}} : hdmi_base_red;
-    wire [7:0] hdmi_green = step_debug_enabled ?
-                            {8{sms_debug_terminal_pixel}} : hdmi_base_green;
-    wire [7:0] hdmi_blue = step_debug_enabled ?
-                           {8{sms_debug_terminal_pixel}} : hdmi_base_blue;
-
-    wire hdmi_audio_clk_raw;
-    wire hdmi_audio_clk;
-    clockdiv #(
-        .CLK_HZ(27_000_000),
-        .OUT_HZ(44_100)
-    ) hdmi_audio_clock_divider (
-        .clk_src(clk),
-        .reset_n(sms_reset_n),
-        .clk_div(hdmi_audio_clk_raw),
-        .clk_rise()
-    );
-
-    BUFG hdmi_audio_clk_buf (
-        .O(hdmi_audio_clk),
-        .I(hdmi_audio_clk_raw)
-    );
-
-    reg [15:0] hdmi_mix_meta = 16'd0;
-    reg [15:0] hdmi_mix_sample = 16'd0;
-    reg [15:0] hdmi_mix_meta_right = 16'd0;
-    reg [15:0] hdmi_mix_sample_right = 16'd0;
-    // Apply one bit of gain only to HDMI, with saturation rather than wrap.
-    // MoonSound fork: HDMI carries the stereo mix (left and right).
-    wire signed [16:0] hdmi_mix_louder_wide =
-        $signed({audio_sample_hold_left[15], audio_sample_hold_left}) <<< 1;
-    wire [15:0] hdmi_mix_louder_sample =
-        hdmi_mix_louder_wide[16:15] == 2'b00 ||
-        hdmi_mix_louder_wide[16:15] == 2'b11 ? hdmi_mix_louder_wide[15:0] :
-        hdmi_mix_louder_wide[16] ? 16'h8000 : 16'h7FFF;
-    wire signed [16:0] hdmi_mix_louder_wide_right =
-        $signed({audio_sample_hold_right[15], audio_sample_hold_right}) <<< 1;
-    wire [15:0] hdmi_mix_louder_sample_right =
-        hdmi_mix_louder_wide_right[16:15] == 2'b00 ||
-        hdmi_mix_louder_wide_right[16:15] == 2'b11 ? hdmi_mix_louder_wide_right[15:0] :
-        hdmi_mix_louder_wide_right[16] ? 16'h8000 : 16'h7FFF;
-    always_ff @(posedge clk or negedge sms_reset_n)
-    begin
-        if (!sms_reset_n) begin
-            hdmi_mix_meta <= 16'd0;
-            hdmi_mix_sample <= 16'd0;
-            hdmi_mix_meta_right <= 16'd0;
-            hdmi_mix_sample_right <= 16'd0;
-        end else begin
-            // audio_sample_hold_* are coherent, slowly changing snapshots
-            // of the same complete mix sent to audio_drive.
-            hdmi_mix_meta <= hdmi_mix_louder_sample;
-            hdmi_mix_sample <= hdmi_mix_meta;
-            hdmi_mix_meta_right <= hdmi_mix_louder_sample_right;
-            hdmi_mix_sample_right <= hdmi_mix_meta_right;
-        end
-    end
-
-    wire [15:0] hdmi_audio_samples [1:0];
-    assign hdmi_audio_samples[0] = hdmi_mix_sample;
-    assign hdmi_audio_samples[1] = hdmi_mix_sample_right;
-
-    // V9990 fork: the VU meter is out; black picture until the V9990 video
-    // chain replaces this transmitter.
-    assign vu_rgb = 24'h000000;
-
-    wire [9:0] hdmi_tmds_internal [2:0];
-    hdmi #(
-        .VIDEO_ID_CODE(2),
-        .DVI_OUTPUT(1'b0),
-        .VIDEO_REFRESH_RATE(60.0),
-        .IT_CONTENT(1'b1),
-        .AUDIO_RATE(44_100),
-        .AUDIO_BIT_WIDTH(16),
-        .VENDOR_NAME({"Unknown", 8'd0}),
-        .PRODUCT_DESCRIPTION({"New Juice", 56'd0}),
-        .SOURCE_DEVICE_INFORMATION(8'h00),
-        .START_X(0),
-        .START_Y(0),
-        .NUM_CHANNELS(3)
-    ) hdmi_inst (
-        .clk_pixel_x5(video_clk_135),
-        .clk_pixel(clk),
-        .clk_audio(hdmi_audio_clk),
-        .reset(~sms_reset_n),
-        .rgb({hdmi_red, hdmi_green, hdmi_blue}),
-        .audio_sample_word(hdmi_audio_samples),
-        .cx(hdmi_x),
-        .cy(hdmi_y),
-        .frame_width(),
-        .frame_height(),
-        .screen_width(),
-        .screen_height(),
-        .tmds_internal(hdmi_tmds_internal)
-    );
-
-    wire [2:0] hdmi_tmds;
-    wire hdmi_tmds_clock_unused;
-    serializer #(
-        .NUM_CHANNELS(3),
-        .VIDEO_RATE(0)
-    ) hdmi_serializer_inst (
-        .clk_pixel(clk),
-        .clk_pixel_x5(video_clk_135),
-        .reset(~sms_reset_n),
-        .tmds_internal(hdmi_tmds_internal),
-        .tmds(hdmi_tmds),
-        .tmds_clock(hdmi_tmds_clock_unused)
-    );
-
-    ELVDS_OBUF hdmi_output_buffers [3:0] (
-        .I({clk, hdmi_tmds}),
-        .O({tmds_clk_p, tmds_data_p}),
-        .OB({tmds_clk_n, tmds_data_n})
-    );
-    
     input_debouncer
     #(
         .WIDTH(3)
@@ -1556,7 +1385,7 @@ module top
     wire sd_drive_en =
         active_module_reset_n && sd_data_out_en;
     wire jt51_drive_en = active_module_reset_n && jt51_status_read;
-    wire opl4_drive_en = active_module_reset_n && opl4_rd_active;
+    wire v9990_drive_en = active_module_reset_n && v9990_rd_active;
 
     assign data_out =
         ({8{slot_drive_en}} & slot_expander_data_out) |
@@ -1566,22 +1395,22 @@ module top
         ({8{bios_drive_en}} & flash_rom_data_out) |
         ({8{sd_drive_en}} & sd_data_out) |
         ({8{jt51_drive_en}} & jt51_data_out) |
-        ({8{opl4_drive_en}} & opl4_rd_data);
+        ({8{v9990_drive_en}} & v9990_rd_data);
 
     assign data_out_en =
         slot_drive_en || mapper_drive_en || smr_drive_en ||
         linear_drive_en ||
-        bios_drive_en || sd_drive_en || jt51_drive_en || opl4_drive_en;
+        bios_drive_en || sd_drive_en || jt51_drive_en || v9990_drive_en;
 
     assign mapper_port_read =
         (active_module_reset_n && !iorq_n && m1_n && !rd_n &&
          addr[7:2] == 6'b111111) ||
-        opl4_drive_en;
+        v9990_drive_en;
     
     cd_demux cd_demux_inst(
         .data_out(data_out),
         .data_out_en(data_out_en),
-        .wait_in_n(memory_wait_n && step_debug_wait_n && opl4_wait_n),
+        .wait_in_n(memory_wait_n && step_debug_wait_n && v9990_wait_n),
         .rd_n(rd_n),
         .sltsl_n(sltsl_n),
         .mapper_port_read(mapper_port_read),
@@ -1616,61 +1445,122 @@ module top
         .din(native_sdram_din),
         .wdm(native_sdram_wdm),
         .dout32(native_sdram_dout32),
-        .data_ready(arb_a_data_ready),
+        .data_ready(native_sdram_data_ready),
         .busy(arb_a_busy),
-        .enabled(native_sdram_enabled)
+        .enabled(native_sdram_enabled),
+        .ctrl_busy(native_sdram_busy),
+        .aux_capture(arb_aux_capture)
     );
 
-    // V9990 fork: the MoonSound is out. The SPI flash belongs to flash_roms
-    // again, and the wave port of the arbiter is idle.
+    // V9990 fork: the SPI flash belongs to flash_roms alone.
     assign mspi_cs = nj_mspi_cs;
     assign mspi_sclk = nj_mspi_sclk;
     assign mspi_mosi = nj_mspi_mosi;
-    assign opl4_wv_req = 1'b0;
-    assign opl4_wv_we = 1'b0;
-    assign opl4_wv_addr = 22'd0;
-    assign opl4_wv_wdata = 8'h00;
-    assign opl4_rom_write_en = 1'b0;
-    assign opl4_rd_data = 8'h00;
-    assign opl4_rd_active = 1'b0;
-    assign opl4_wait_n = 1'b1;
-    assign opl4_int_n = 1'b1;
     assign opl4_mix_l = 16'sd0;
     assign opl4_mix_r = 16'sd0;
     assign opl4_mix_mono = 16'sd0;
 
-    // MoonSound fork: the adapter (CPU + Z80-paced refresh) shares the
-    // controller with the MoonSound wave memory, and a refresh timer keeps
-    // the SDRAM refreshed even if the Z80 stops issuing RFSH cycles.
-    nj_sdram_arb sdram_arbiter_inst(
+    // ---------------------------------------------------------------------
+    // V9990 (tiny9990, ports 60h-6Fh) with its VRAM in the SDRAM and its
+    // picture on HDMI (DVI)
+    // ---------------------------------------------------------------------
+    wire v9990_clk21m_en;
+    wire v9990_clk14m_en;
+    wire v9990_clk25m_en;
+    wire v9990_ram_req;
+    wire v9990_ram_oe_n;
+    wire v9990_ram_we_n;
+    wire v9990_ram_rfsh_n;
+    wire [18:0] v9990_ram_addr;
+    wire [31:0] v9990_ram_din;
+    wire [2:0] v9990_ram_din_size;
+    wire [31:0] v9990_ram_dout;
+    wire v9990_ram_ack_n;
+    wire arb_s_v_rd;
+    wire arb_s_v_wr;
+    wire arb_s_v_dbl;
+    wire [20:0] arb_s_v_addr;
+    wire [31:0] arb_s_v_din0;
+    wire [3:0] arb_s_v_dqm0;
+    wire [31:0] arb_s_v_din1;
+    wire [3:0] arb_s_v_dqm1;
+    wire arb_s_v_data_ready;
+
+    v9990_nj #(
+        .IO_BASE_ADDR(8'h60),
+        .UPSCAN_BLEND(1)
+    ) v9990_inst (
+        .clk(main_clk),
+        .reset_n(active_module_reset_n),
+        .slot_reset_n(reset_in_n),
+        .iorq_n(iorq_n),
+        .rd_n(rd_n),
+        .wr_n(wr_n),
+        .addr(addr[7:0]),
+        .din(cd_in),
+        .rd_data(v9990_rd_data),
+        .rd_active(v9990_rd_active),
+        .wait_n(v9990_wait_n),
+        .int_n(v9990_int_n),
+        .clk21m_en(v9990_clk21m_en),
+        .clk14m_en(v9990_clk14m_en),
+        .clk25m_en(v9990_clk25m_en),
+        .ram_req(v9990_ram_req),
+        .ram_oe_n(v9990_ram_oe_n),
+        .ram_we_n(v9990_ram_we_n),
+        .ram_rfsh_n(v9990_ram_rfsh_n),
+        .ram_addr(v9990_ram_addr),
+        .ram_din(v9990_ram_din),
+        .ram_din_size(v9990_ram_din_size),
+        .ram_dout(v9990_ram_dout),
+        .ram_ack_n(v9990_ram_ack_n),
+        .clk_pixel(clk),
+        .clk_pixel_x5(video_clk_135),
+        .video_reset_n(sms_reset_n),
+        .tmds_clk_p(tmds_clk_p),
+        .tmds_clk_n(tmds_clk_n),
+        .tmds_data_p(tmds_data_p),
+        .tmds_data_n(tmds_data_n)
+    );
+
+    // V9990 fork: the adapter's commands go straight to the controller; the
+    // arbiter tells it when it may issue, runs the VRAM port of the V9990 in
+    // its fixed slots and refreshes the SDRAM on its own timer.
+    nj_v9990_arb sdram_arbiter_inst(
         .clk(main_clk),
         .rst_n(board_enabled),
         .a_rd(native_sdram_rd),
         .a_wr(native_sdram_wr),
         .a_refresh(native_sdram_refresh),
-        .a_addr(native_sdram_addr),
-        .a_din(native_sdram_din),
-        .a_wdm(native_sdram_wdm),
         .a_busy(arb_a_busy),
-        .a_data_ready(arb_a_data_ready),
         .cpu_sltsl_n(sltsl_n_in),
         .cpu_rd_n(rd_n_in),
-        .wv_req(opl4_wv_req),
-        .wv_we(opl4_wv_we),
-        .wv_addr(opl4_wv_addr),
-        .wv_wdata(opl4_wv_wdata),
-        .wv_dout(opl4_wv_dout),
-        .wv_done(opl4_wv_done),
-        .rom_write_en(opl4_rom_write_en),
-        .s_rd(arb_s_rd),
-        .s_wr(arb_s_wr),
+        .v_en(native_sdram_enabled),
+        .v_timing(v9990_ram_req),
+        .clk21m_en(v9990_clk21m_en),
+        .clk14m_en(v9990_clk14m_en),
+        .clk25m_en(v9990_clk25m_en),
+        .v_oe_n(v9990_ram_oe_n),
+        .v_we_n(v9990_ram_we_n),
+        .v_rfsh_n(v9990_ram_rfsh_n),
+        .v_addr(v9990_ram_addr),
+        .v_din(v9990_ram_din),
+        .v_din_size(v9990_ram_din_size),
+        .v_dout(v9990_ram_dout),
+        .v_ack_n(v9990_ram_ack_n),
         .s_refresh(arb_s_refresh),
-        .s_addr(arb_s_addr),
-        .s_din(arb_s_din),
-        .s_wdm(arb_s_wdm),
-        .s_dout32(native_sdram_dout32),
-        .s_data_ready(native_sdram_data_ready),
+        .s_v_rd(arb_s_v_rd),
+        .s_v_wr(arb_s_v_wr),
+        .s_v_dbl(arb_s_v_dbl),
+        .s_v_addr(arb_s_v_addr),
+        .s_v_din0(arb_s_v_din0),
+        .s_v_dqm0(arb_s_v_dqm0),
+        .s_v_din1(arb_s_v_din1),
+        .s_v_dqm1(arb_s_v_dqm1),
         .s_busy(native_sdram_busy),
+        .s_v_data_ready(arb_s_v_data_ready),
+        .aux_capture(arb_aux_capture),
+        .rd_q(sdrc_data_in),
         .own_refresh()
     );
 
@@ -1698,23 +1588,32 @@ module top
         .clk(main_clk),
         .clk_sdram(sdram_clk),
         .resetn(board_enabled),
-        .rd(arb_s_rd),
-        .wr(arb_s_wr),
+        .rd(native_sdram_rd),
+        .wr(native_sdram_wr),
         .refresh(arb_s_refresh),
-        .addr(arb_s_addr),
-        .din(arb_s_din),
-        .wdm(arb_s_wdm),
+        .addr(native_sdram_addr),
+        .din(native_sdram_din),
+        .wdm(native_sdram_wdm),
         .dout(native_sdram_dout),
         .dout32(native_sdram_dout32),
         .data_ready(native_sdram_data_ready),
         .busy(native_sdram_busy),
-        .enabled(native_sdram_enabled)
+        .enabled(native_sdram_enabled),
+        .v_rd(arb_s_v_rd),
+        .v_wr(arb_s_v_wr),
+        .v_dbl(arb_s_v_dbl),
+        .v_addr(arb_s_v_addr),
+        .v_din0(arb_s_v_din0),
+        .v_dqm0(arb_s_v_dqm0),
+        .v_din1(arb_s_v_din1),
+        .v_dqm1(arb_s_v_dqm1),
+        .v_data_ready(arb_s_v_data_ready)
     );
 
     // Interrupt sources are active low. int_out drives the board-level
     // inverter below, matching WonderTANG's external polarity.
     assign int_n =
-        (opll_module_reset_n ? jt51_irq_n : 1'b1) && opl4_int_n;
+        (opll_module_reset_n ? jt51_irq_n : 1'b1) && v9990_int_n;
 
     assign int_out = ~int_n;
     assign wait_out = ~wait_n;

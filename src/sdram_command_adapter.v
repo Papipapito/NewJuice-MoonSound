@@ -32,7 +32,15 @@ module sdram_command_adapter
     input [31:0] dout32,
     input data_ready,
     input busy,
-    input enabled
+    input enabled,
+    // V9990 fork. busy is the arbiter's (it also holds this adapter back
+    // while the V9990 or a refresh goes first); ctrl_busy is the controller's
+    // own, and is what tells that this adapter's write or refresh has ended.
+    // aux_capture loads read_data with the word on the pins for the V9990:
+    // one capture register (in the I/O cells) for both clients. It never
+    // coincides with a read of this adapter.
+    input ctrl_busy,
+    input aux_capture
 );
 
     localparam [2:0] CMD_READ = 3'b101;
@@ -139,23 +147,26 @@ module sdram_command_adapter
                 debug_refresh_count <= debug_refresh_count + 1'b1;
             end
 
+            if (aux_capture)
+                read_data_reg <= dout32;
+
             if (command_pending) begin
-                if (busy)
+                if (ctrl_busy)
                     command_saw_busy <= 1'b1;
 
                 if (pending_read && data_ready) begin
                     read_data_reg <= dout32;
                     command_pending <= 1'b0;
                     cmd_ack_reg <= 1'b1;
-                end else if (!pending_read && command_saw_busy && !busy) begin
+                end else if (!pending_read && command_saw_busy && !ctrl_busy) begin
                     command_pending <= 1'b0;
                     cmd_ack_reg <= 1'b1;
                 end
             end else if (refresh_pending) begin
-                if (busy)
+                if (ctrl_busy)
                     refresh_saw_busy <= 1'b1;
 
-                if (refresh_saw_busy && !busy) begin
+                if (refresh_saw_busy && !ctrl_busy) begin
                     refresh_pending <= 1'b0;
                     refresh_saw_busy <= 1'b0;
                 end

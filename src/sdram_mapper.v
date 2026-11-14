@@ -145,10 +145,9 @@ module sdram_mapper
                     // every idle clock and are only used once sdrc_cmd_en is
                     // issued, so the start decision no longer drives their
                     // clock enables (same values, same cycle as before).
-                    // MoonSound fork: 2 MB mapper (128 pages). Page bit 7 is
-                    // ignored, so pages 80h-FFh mirror 00h-7Fh like a real
-                    // 2 MB mapper and SDRAM 0x200000+ (YRW801) is never reached.
-                    sdrc_addr_reg <= {2'b00, mapper_byte_addr[20:2]};
+                    // V9990 fork: back to New Juice's 4 MB mapper (256 pages,
+                    // SDRAM 0x000000-0x3FFFFF); the YRW801 is gone.
+                    sdrc_addr_reg <= {1'b0, mapper_byte_addr[21:2]};
                     sdrc_dqm_reg <= byte_dqm;
                     sdrc_data_reg <= {4{data_in}};
                     sdrc_cmd_reg <= memory_read_selected ? SDRAM_CMD_READ : SDRAM_CMD_WRITE;

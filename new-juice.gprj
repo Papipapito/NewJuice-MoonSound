@@ -60,16 +60,6 @@
         <File path="src/jtopl/hdl/jt2413.v" type="file.verilog" enable="1"/>
         <File path="src/rpll/rpll_main.v" type="file.verilog" enable="1"/>
         <File path="src/rpll/rpll_video.v" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/audio_clock_regeneration_packet.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/audio_info_frame.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/audio_sample_packet.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/auxiliary_video_information_info_frame.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/source_product_description_info_frame.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/packet_assembler.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/packet_picker.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/tmds_channel.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/hdmi.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/serializer.sv" type="file.verilog" enable="1"/>
         <File path="src/sd_reader.sv" type="file.verilog" enable="1"/>
         <File path="src/sd_registers.v" type="file.verilog" enable="1"/>
         <File path="src/sdcmd_ctrl.sv" type="file.verilog" enable="1"/>
@@ -81,7 +71,31 @@
         <File path="src/slot_expander.v" type="file.verilog" enable="1"/>
         <File path="src/spi_flash_reader.v" type="file.verilog" enable="1"/>
         <File path="src/super_megaram.v" type="file.verilog" enable="1"/>
-        <File path="src/moonsound/nj_sdram_arb.v" type="file.verilog" enable="1"/>
+        <File path="src/v9990/v9990_config.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/ram.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/video.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/tiny9990/t9990.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/tiny9990/t9990_bitmap.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/tiny9990/t9990_blit.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/tiny9990/t9990_blit_addr.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/tiny9990/t9990_blit_bitmask.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/tiny9990/t9990_blit_fifo.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/tiny9990/t9990_clock.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/tiny9990/t9990_color_decode.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/tiny9990/t9990_palette.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/tiny9990/t9990_pattern.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/tiny9990/t9990_port.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/tiny9990/t9990_priority.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/tiny9990/t9990_ram.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/tiny9990/t9990_selector.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/tiny9990/t9990_shift_buffer.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/tiny9990/t9990_sprite.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/tiny9990/t9990_timing.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/video_upscan.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/dvi_tx/dvi_tx.v" type="file.verilog" enable="1"/>
+        <File path="src/v9990/board_rev1_tmds.sv" type="file.verilog" enable="1"/>
+        <File path="src/v9990/nj_v9990_arb.v" type="file.verilog" enable="1"/>
+        <File path="src/v9990/v9990_nj.sv" type="file.verilog" enable="1"/>
         <File path="src/top.v" type="file.verilog" enable="1"/>
         <File path="src/top.cst" type="file.cst" enable="1"/>
         <File path="src/top.sdc" type="file.sdc" enable="1"/>
