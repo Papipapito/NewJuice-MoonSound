@@ -1,4 +1,9 @@
 module flash_roms
+#(
+    // V9990 fork: 0 hides the SFG-01 BIOS (subslot 1, page 0); its YM2151
+    // is no longer in the design.
+    parameter INCLUDE_SFG = 1'b0
+)
 (
     input clk,
     input reset_n,
@@ -81,7 +86,7 @@ module flash_roms
                           addr[15:14] == 2'b00;
     wire page1_selected = !sltsl_n && !merq_n && iorq_n && rfsh_n &&
                           addr[15:14] == 2'b01;
-    wire sfg_selected = page0_selected && page0_subslot_en[1];
+    wire sfg_selected = INCLUDE_SFG && page0_selected && page0_subslot_en[1];
     wire dos2_selected = page1_selected && page1_subslot_en[0];
     wire fmpac_selected = page1_selected && page1_subslot_en[1];
     wire sfg_io_selected = sfg_selected && addr_is_sfg_io;

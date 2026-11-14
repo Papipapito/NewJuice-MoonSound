@@ -1,6 +1,7 @@
 module top
 #(
-    parameter SMS_DEBUGGER_ENABLED = 1'b1
+    // V9990 fork: the debugger is out (0 removes its terminal and stepper)
+    parameter SMS_DEBUGGER_ENABLED = 1'b0
 )
 (
     input   clkin,
@@ -378,14 +379,12 @@ module top
     
     // main pll
     wire sdram_clk;
-    wire opl4_clk54;
-    wire opl4_clk_eng;
     rpll_main rpll_main(
         .clkout(main_clk), // 108 MHz main clock
         .lock(rpll_main_lock), 
         .clkoutp(sdram_clk), // 108 MHz rotated SDRAM clock
-        .clkoutd(opl4_clk54), // 54 MHz, MoonSound bus side
-        .clkoutd3(opl4_clk_eng), // 36 MHz, MoonSound PCM engine
+        .clkoutd(),
+        .clkoutd3(),
         .reset(~pll_run_reset_n),
         .clkin(clkin) //input clkin (27Mhz)
     );
@@ -624,21 +623,9 @@ module top
     wire signed [15:0] opl4_mix_l;
     wire signed [15:0] opl4_mix_r;
     wire signed [15:0] opl4_mix_mono;
-    wire opl4_flash_owned;
-    wire opl4_mspi_cs;
-    wire opl4_mspi_sclk;
-    wire opl4_mspi_mosi;
     wire nj_mspi_cs;
     wire nj_mspi_sclk;
     wire nj_mspi_mosi;
-    wire opl4_wl_done;
-    wire opl4_wl_error;
-    wire opl4_wl_badimg;
-    wire signed [15:0] opl4_vu_fm_l;
-    wire signed [15:0] opl4_vu_fm_r;
-    wire signed [15:0] opl4_vu_wave_l;
-    wire signed [15:0] opl4_vu_wave_r;
-    wire opl4_slot_alive;
     reg [2:0] psg_cpu_clk_sync = 3'b000;
     (* syn_preserve = 1, ASYNC_REG = "TRUE" *)
     reg [2:0] psg_synth_enable_sync = 3'b000;
@@ -872,40 +859,15 @@ module top
         end
     endgenerate
 
-    // SFG-01/YM2151 memory-mapped interface in expanded subslot 1.
-    // 3FF0 selects a register and returns status; 3FF1 writes register data.
-    assign jt51_chip_selected =
-        active_module_reset_n && !sltsl_n && page0_subslot_en[1] &&
-        !merq_n && iorq_n && rfsh_n && addr[15:1] == 15'h1ff8;
-    assign jt51_status_read =
-        jt51_chip_selected && !rd_n && addr[0] == 1'b0;
-
-    // JT51 runs at the same precise 3.579545 MHz enable as JT2413. Its P1
-    // enable is asserted on every second chip enable, matching the core API.
-    jt51 jt51_inst (
-        .rst(~opll_module_reset_n),
-        .clk(clk),
-        .cen(opll_clock_enable),
-        .cen_p1(opll_clock_enable && jt51_clock_phase),
-        .cs_n(~jt51_chip_selected),
-        .wr_n(wr_n),
-        .a0(addr[0]),
-        .din(cd_in),
-        .dout(jt51_data_out),
-        .ct1(),
-        .ct2(),
-        .irq_n(jt51_irq_n),
-        .sample(),
-        .left(jt51_left),
-        .right(jt51_right),
-        .xleft(),
-        .xright()
-    );
-
-    // Average the stereo outputs to mono, retaining the full signed range.
-    assign jt51_stereo_sum =
-        {jt51_left[15], jt51_left} + {jt51_right[15], jt51_right};
-    assign jt51_audio_sample = jt51_stereo_sum[16:1];
+    // V9990 fork: the SFG-01 (YM2151) is out. Its nets stay as constants.
+    assign jt51_chip_selected = 1'b0;
+    assign jt51_status_read = 1'b0;
+    assign jt51_data_out = 8'h00;
+    assign jt51_irq_n = 1'b1;
+    assign jt51_left = 16'sd0;
+    assign jt51_right = 16'sd0;
+    assign jt51_stereo_sum = 17'sd0;
+    assign jt51_audio_sample = 16'sd0;
 
     // JT49's unsigned 10-bit mix has true zero at silence. Scale it into the
     // same approximate 14-bit range used by the previous PSG implementation.
@@ -1116,90 +1078,9 @@ module top
     assign hdmi_audio_samples[0] = hdmi_mix_sample;
     assign hdmi_audio_samples[1] = hdmi_mix_sample_right;
 
-    // ---------------------------------------------------------------------
-    // MoonSound fork: VU meter on HDMI (MoonTANG's vu_screen; vu_meter_nj
-    // does what MoonTANG's vu_meter does with a third of its logic)
-    // ---------------------------------------------------------------------
-    // No framebuffer: vu_screen draws every pixel from hdmi_x/hdmi_y, with
-    // its rgb one pixel clock after them, as the hdmi module expects.
-    // Bars: OPL4 FM L/R and wave L/R (the two halves of the OPL4 mix, after
-    // the F8h attenuation) and what HDMI plays, L/R (the whole mix with the
-    // HDMI-only x2, saturated).
-    //
-    // Clock domains: vu_meter_nj runs on opl4_clk54, where the FM and wave
-    // samples live; the HDMI samples (main_clk) enter it through its input
-    // register, an ordinary timed path (same PLL, in phase). It keeps the
-    // peak of each signal over a video frame and changes its outputs only
-    // once per frame, at the start of the vertical blanking (vu_frame_tog, a
-    // toggle synchronized in vu_meter_nj).
-    // vu_screen (27 MHz pixel clock) reads them during the active lines,
-    // milliseconds after they settled, so they need no synchronizer; that
-    // crossing is in the asynchronous clock groups of top.sdc. The status
-    // bits are quasi-static and go through two pixel-clock registers.
-    //
-    // The hdmi module is reset with sms_reset_n, which follows the MSX
-    // /RESET (active_module_reset_n), and so is the video PLL: the picture
-    // can drop for a moment while the MSX is reset.
-    localparam integer VU_FOOT_N = 35;
-    localparam [8*VU_FOOT_N-1:0] VU_FOOT =
-        "NEW JUICE MOONSOUND V1.1 2026-10-16";
-
-    reg vu_frame_tog = 1'b0;
-    always_ff @(posedge clk)
-    begin
-        if (hdmi_x == 10'd0 && hdmi_y == 10'd480)
-            vu_frame_tog <= ~vu_frame_tog;
-    end
-
-    wire [29:0] vu_level;
-    wire [29:0] vu_peak;
-    vu_meter_nj #(
-        .NCH(6)
-    ) vu_meter_inst (
-        .clk(opl4_clk54),
-        .frame_tog(vu_frame_tog),
-        .samples({hdmi_mix_louder_sample_right, hdmi_mix_louder_sample,
-                  opl4_vu_wave_r, opl4_vu_wave_l,
-                  opl4_vu_fm_r, opl4_vu_fm_l}),
-        .level(vu_level),
-        .peak(vu_peak)
-    );
-
-    (* syn_preserve = 1, ASYNC_REG = "TRUE" *)
-    reg [1:0] vu_st_rom_meta = 2'd0;
-    reg [1:0] vu_st_rom = 2'd0;
-    (* syn_preserve = 1, ASYNC_REG = "TRUE" *)
-    reg vu_st_msx_meta = 1'b0;
-    reg vu_st_msx = 1'b0;
-    always_ff @(posedge clk)
-    begin
-        // 0 = copying the YRW801, 1 = OK, 2 = error, 3 = not a YRW801
-        vu_st_rom_meta <= opl4_wl_error ? 2'd2 :
-                          !opl4_wl_done ? 2'd0 :
-                          opl4_wl_badimg ? 2'd3 : 2'd1;
-        vu_st_rom <= vu_st_rom_meta;
-        vu_st_msx_meta <= opl4_slot_alive;
-        vu_st_msx <= vu_st_msx_meta;
-    end
-
-    vu_screen #(
-        .TITLE_N(9),
-        .TITLE("NEW JUICE"),
-        .SUB_N(16),
-        .SUB("+ MOONSOUND OPL4"),
-        .FOOT_N(VU_FOOT_N),
-        .FOOT(VU_FOOT)
-    ) vu_screen_inst (
-        .clk(clk),
-        .rst_n(sms_reset_n),
-        .cx(hdmi_x),
-        .cy(hdmi_y),
-        .rgb(vu_rgb),
-        .level(vu_level),
-        .peak(vu_peak),
-        .st_rom(vu_st_rom),
-        .st_msx(vu_st_msx)
-    );
+    // V9990 fork: the VU meter is out; black picture until the V9990 video
+    // chain replaces this transmitter.
+    assign vu_rgb = 24'h000000;
 
     wire [9:0] hdmi_tmds_internal [2:0];
     hdmi #(
@@ -1740,59 +1621,23 @@ module top
         .enabled(native_sdram_enabled)
     );
 
-    // ---------------------------------------------------------------------
-    // MoonSound (OPL4): FM C4h-C7h, wavetable 7Eh-7Fh, wave memory in SDRAM
-    // ---------------------------------------------------------------------
-    // The SPI flash belongs to flash_roms until New Juice's ROMs are loaded;
-    // then the MoonSound copies the YRW801 (flash 0x200000) to the SDRAM in
-    // the background, with the CPU running.
-    assign mspi_cs = opl4_flash_owned ? opl4_mspi_cs : nj_mspi_cs;
-    assign mspi_sclk = opl4_flash_owned ? opl4_mspi_sclk : nj_mspi_sclk;
-    assign mspi_mosi = opl4_flash_owned ? opl4_mspi_mosi : nj_mspi_mosi;
-
-    moonsound_nj moonsound_inst (
-        .clk_108m(main_clk),
-        .clk_54m(opl4_clk54),
-        .clk_eng(opl4_clk_eng),
-        .lock_main(rpll_main_lock),
-        .sys_rst_n(board_reset_n),
-        .iorq_n(iorq_n),
-        .rd_n(rd_n),
-        .wr_n(wr_n),
-        .m1_n(m1_n),
-        .addr(addr[7:0]),
-        .din(cd_in),
-        .slot_reset_n(reset_in_n),
-        .slot_clk(cpu_clk),
-        .rd_data(opl4_rd_data),
-        .rd_active(opl4_rd_active),
-        .wait_n(opl4_wait_n),
-        .int_n(opl4_int_n),
-        .mix_l(opl4_mix_l),
-        .mix_r(opl4_mix_r),
-        .mix_mono(opl4_mix_mono),
-        .flash_start(flash_rom_loaded),
-        .flash_owned(opl4_flash_owned),
-        .mspi_cs(opl4_mspi_cs),
-        .mspi_sclk(opl4_mspi_sclk),
-        .mspi_mosi(opl4_mspi_mosi),
-        .mspi_miso(mspi_miso),
-        .wv_req(opl4_wv_req),
-        .wv_we(opl4_wv_we),
-        .wv_addr(opl4_wv_addr),
-        .wv_wdata(opl4_wv_wdata),
-        .wv_dout(opl4_wv_dout),
-        .wv_done(opl4_wv_done),
-        .rom_write_en(opl4_rom_write_en),
-        .wl_done(opl4_wl_done),
-        .wl_error(opl4_wl_error),
-        .wl_badimg(opl4_wl_badimg),
-        .vu_fm_l(opl4_vu_fm_l),
-        .vu_fm_r(opl4_vu_fm_r),
-        .vu_wave_l(opl4_vu_wave_l),
-        .vu_wave_r(opl4_vu_wave_r),
-        .slot_alive(opl4_slot_alive)
-    );
+    // V9990 fork: the MoonSound is out. The SPI flash belongs to flash_roms
+    // again, and the wave port of the arbiter is idle.
+    assign mspi_cs = nj_mspi_cs;
+    assign mspi_sclk = nj_mspi_sclk;
+    assign mspi_mosi = nj_mspi_mosi;
+    assign opl4_wv_req = 1'b0;
+    assign opl4_wv_we = 1'b0;
+    assign opl4_wv_addr = 22'd0;
+    assign opl4_wv_wdata = 8'h00;
+    assign opl4_rom_write_en = 1'b0;
+    assign opl4_rd_data = 8'h00;
+    assign opl4_rd_active = 1'b0;
+    assign opl4_wait_n = 1'b1;
+    assign opl4_int_n = 1'b1;
+    assign opl4_mix_l = 16'sd0;
+    assign opl4_mix_r = 16'sd0;
+    assign opl4_mix_mono = 16'sd0;
 
     // MoonSound fork: the adapter (CPU + Z80-paced refresh) shares the
     // controller with the MoonSound wave memory, and a refresh timer keeps
@@ -1876,12 +1721,6 @@ module top
 
     // Before the SDRAM test passes, preserve its failure-code blinker.
     // Afterwards the LED indicates an active SD-card command.
-    // MoonSound fork: if the YRW801 copy failed or the flash at 0x200000 does
-    // not hold the YRW801 (checksum), the LED also gives a short flash every
-    // 1.2 s. The FM part and the wave RAM still work.
-    reg [26:0] yrw_blink = 27'd0;
-    always_ff @(posedge main_clk) yrw_blink <= yrw_blink + 1'b1;
-    wire yrw_led = (opl4_wl_error || opl4_wl_badimg) && (yrw_blink[26:23] == 4'd0);
-    assign led = startup_test_passed ? (sd_busy || yrw_led) : startup_test_led;
+    assign led = startup_test_passed ? sd_busy : startup_test_led;
 
 endmodule
