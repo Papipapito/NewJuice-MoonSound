@@ -1,17 +1,27 @@
 #!/bin/bash
-# Whole-design bench of the New Juice MoonSound fork on the WonderTANG model.
+# Whole-design bench of the New Juice V9990 fork on the WonderTANG model.
 # WSL Ubuntu-24.04 with Icarus 12 and sv2v.
-# Usage: bash tools/sim/board/run_board.sh [main|blank|all|hdmi]
-#   main (default)  boot, MoonSound, mapper, MegaRAM, ROM, OPLL, audio, timing (~40 min)
-#   blank           the flash has no YRW801: the checksum must flag it (and the LED)
-#   all             both at once (two cores)
-#   hdmi            the video PLL runs: VU meter and debugger picture and HDMI audio
-#                   through a verification receiver (hdmi_nj.vh), and its two negative
-#                   controls (three cores, about 75 ms of board time each)
-#   diff            the main bench on this tree and on REF (a git revision, default
-#                   4730f9c = X3, before the bus input stage), side by side (two
-#                   cores), then cyc_diff.py on their per-cycle bus logs: the same
-#                   cycles and bytes, and how much later each bus event comes
+# Usage: bash tools/sim/board/run_board.sh [main|video|neg|all]
+#   main (default)  boot (SDRAM test, ROM copy), the V9990 at ports 60h-6Fh (registers,
+#                   VRAM by P#0 in B1 and P1, /WAIT, SDRAM placement at 0x780000, /INT,
+#                   reset response), the 4 MB mapper, Super-MegaRAM, Nextor ROM, LINEAR,
+#                   OPLL writes, I2S, CPU traffic against a V9990 with its display on
+#                   (no lost VRAM slot), memory reads without /WAIT at 3.58 and 5.37 MHz,
+#                   bus timing at the slot pins, no illegal SDRAM command, no stale row.
+#                   The video PLL is held in reset.
+#   video           the same boot, then the video PLL runs and the picture is captured
+#                   at the input of the (stubbed) DVI transmitter: geometry of 2 frames
+#                   (855 x 524 dots, DE 720 x 480, HS 62), border colour from the
+#                   palette, a B1 bitmap line written by P#0 (video_nj.vh)
+#   neg             negative controls (each one must FAIL): a bit of the V9990 read
+#                   data flipped; the arbiter's a_busy without v_rw_req (the CPU no
+#                   longer yields to a waiting V9990 access: its deadline breaks, a
+#                   VRAM slot is lost); the V9990's SDRAM address moved off 0x780000;
+#                   a_busy forced to 0. They run the short version of main (boot,
+#                   registers, VRAM, CPU traffic with the display on)
+#   all             main, video and neg at once (cores: 1 + 1 + 4)
+# The DVI transmitter is Gowin's encrypted IP (src/v9990/dvi_tx/dvi_tx.v): neither
+# sv2v nor Icarus read it, tools/sim/common/dvi_tx_stub.v takes its place.
 set -e
 cd "$(dirname "$0")"
 R=$(cd ../../.. && pwd)
@@ -22,21 +32,34 @@ command -v "$SV2V" >/dev/null || { echo "sv2v not found: put it in PATH or set S
 MODE=${1:-main}
 mkdir -p build
 # nothing from an earlier run is reused: a failed step stops the bench
-rm -f build/nj_sv2v.v build/nj_sv2v_neg.v build/nj_pins.v build/sd_reader.sv
-rm -f build/nj_sv2v_ref.v build/nj_pins_ref.v build/*.cyc
+rm -f build/nj_sv2v.v build/nj_sv2v_neg*.v build/nj_pins.v build/sd_reader.sv build/t9990.sv
 
 # ---- 1. the design as listed in new-juice.gprj, converted to plain Verilog ----
+# Three workarounds, none touches src/:
+#  - sd_reader.sv has an unnamed instance (accepted by Gowin, not by sv2v);
+#  - t9990.sv declares the interface instances (REG, STATUS...) after the first
+#    module that uses them: sv2v wants them first, so the lines are moved up;
+#  - the encrypted DVI_TX_Top IP is replaced by a stub with the same ports.
+# sv2v also wants the files that declare interfaces and packages first.
 convert() {   # convert <tree> <output>
-    local T=$1 OUT=$2 FILES LIST="" f
+    local T=$1 OUT=$2 FILES LIST="" PRE="" POST="" f x
     FILES=$(grep -o 'path="[^"]*"' "$T/new-juice.gprj" | sed 's/path="//;s/"//' | grep -E '\.(v|sv)$')
-    # sd_reader.sv has an unnamed instance (accepted by Gowin, not by sv2v)
     sed 's/^sd_crc_16(/sd_crc_16 u_sd_crc_16(/' "$T/src/sd_reader.sv" > build/sd_reader.sv
+    python3 fix_t9990.py "$T/src/v9990/tiny9990/t9990.sv" build/t9990.sv
     for f in $FILES; do
-        if [ "$f" = "src/sd_reader.sv" ]; then LIST="$LIST $PWD/build/sd_reader.sv"; else LIST="$LIST $T/$f"; fi
+        case "$f" in
+            src/sd_reader.sv)                LIST="$LIST $PWD/build/sd_reader.sv" ;;
+            src/v9990/tiny9990/t9990.sv)     LIST="$LIST $PWD/build/t9990.sv" ;;
+            src/v9990/dvi_tx/dvi_tx.v)       LIST="$LIST $PWD/../common/dvi_tx_stub.v" ;;
+            *)                               LIST="$LIST $T/$f" ;;
+        esac
     done
-    # SIMULATION: the jotego cores (jt2413, jt51, jt49) zero their clock dividers
+    for x in $LIST; do
+        if grep -qE '^(interface|package) ' "$x"; then PRE="$PRE $x"; else POST="$POST $x"; fi
+    done
+    # SIMULATION: the jotego cores (jt2413, jt49) zero their clock dividers
     # in simulation; without it the OPLL never leaves X in Icarus.
-    (cd "$T" && "$SV2V" -DMODEL_TECH -DSIMULATION -I src $LIST -w "$OLDPWD/$OUT")
+    (cd "$T" && "$SV2V" -DMODEL_TECH -DSIMULATION -I src $PRE $POST -w "$OLDPWD/$OUT")
 }
 convert "$R" build/nj_sv2v.v
 
@@ -49,13 +72,19 @@ patch() {   # patch <old> <new> [file]
 import sys
 p = sys.argv[3]
 t = open(p, encoding='utf-8').read()
-open(p, 'w', encoding='utf-8').write(t.replace(sys.argv[1], sys.argv[2], 1))
+open(p, 'w', encoding='utf-8', newline='\n').write(t.replace(sys.argv[1], sys.argv[2], 1))
 EOF
 }
 shortcuts() {   # shortcuts <converted design>
     patch "localparam [22:0] AUTO_S1_DELAY_CYCLES = 23'd6749999;" "localparam [22:0] AUTO_S1_DELAY_CYCLES = 23'd2000;" "$1"
     patch "localparam [15:0] LAST_TEST_ADDR = 16'hfffe;"          "localparam [15:0] LAST_TEST_ADDR = 16'h00fe;" "$1"
     patch "localparam [17:0] ROM_BYTE_COUNT = 18'h28000;"         "localparam [17:0] ROM_BYTE_COUNT = 18'h00800;" "$1"
+    # Icarus 12 has no unpacked unions: the blitter's `work` (t9990_blit.sv) becomes
+    # the packed vector the three members overlay (same bits, LSB aligned)
+    python3 fix_union.py "$1"
+    # the sprite generate (t9990_sprite.sv) puts the loop index in an untyped localparam that
+    # sv2v then uses inside a concatenation, which Icarus rejects ("indefinite width")
+    patch "localparam v_num = _gv_v_num_1;" "localparam [4:0] v_num = _gv_v_num_1;" "$1"
     echo "sv2v OK: $(grep -c '^module ' "$1") modules in $1"
 }
 shortcuts build/nj_sv2v.v
@@ -72,16 +101,16 @@ comp() {   # comp <name> [iverilog options]   (NETLIST, EXTRA: from the environm
     iverilog -g2012 -I . -s tb_nj_board "$@" -o build/$name.vvp \
         tb_nj_board.v wt20x_board.v ../common/sdram_model.v ../common/spi_flash_model.v \
         ${EXTRA:-} ${PINS:-build/nj_pins.v} ${NETLIST:-build/nj_sv2v.v} "$GW" > build/$name.comp 2>&1 || rc=$?
-    grep -v 'Pruning\|expects 1 bits\|timescale\|Static variable' build/$name.comp || true
+    grep -v 'Pruning\|expects 1 bits\|timescale\|Static variable\|out of bounds array access cur_area' build/$name.comp || true
     if [ $rc != 0 ] || [ ! -s build/$name.vvp ]; then
         rm -f build/$name.vvp
         echo "ERROR: iverilog failed for $name (build/$name.comp)"; exit 1
     fi
 }
 run() { stdbuf -oL vvp -n build/$1.vvp +cyclog=build/$1.cyc > build/$1.log 2>&1 || true; }
-show() { echo "################ $1 ################"; grep -a -v "^VCD\|WARNING: .*prim_sim" build/$1.log | tail -150; }
+show() { echo "################ $1 ################"; grep -a -v "^VCD\|WARNING: .*prim_sim" build/$1.log | tail -${2:-250}; }
 verdict() {   # verdict <name>...: exit status 0 only if every log says PASS
-    local n=0 npass=0 failed=""
+    local n=0 npass=0 failed="" name
     for name in "$@"; do
         n=$((n + 1))
         if grep -a -q "RESULTADO: PASS" build/$name.log; then npass=$((npass + 1)); else failed="$failed $name"; fi
@@ -89,72 +118,40 @@ verdict() {   # verdict <name>...: exit status 0 only if every log says PASS
     echo "run_board: $npass/$n PASS${failed:+ (failed:$failed)}"
     [ "$npass" = "$n" ]
 }
+# negative controls: the netlist is patched, the bench is the short one
+negs() {
+    cp build/nj_sv2v.v build/nj_sv2v_neg1.v
+    patch "assign rd_data = dout_q;" "assign rd_data = dout_q ^ 8'h01;" build/nj_sv2v_neg1.v
+    # the CPU no longer yields to a V9990 request that is waiting: the arbiter's deadline breaks
+    cp build/nj_sv2v.v build/nj_sv2v_neg2.v
+    patch "assign a_busy = ((s_busy | v_rw_req) | rf_hold) | a_closed;" "assign a_busy = s_busy | rf_hold;" build/nj_sv2v_neg2.v
+    cp build/nj_sv2v.v build/nj_sv2v_neg3.v
+    patch "assign s_v_addr = {4'b1111, v_addr[18:2]};" "assign s_v_addr = {4'b1110, v_addr[18:2]};" build/nj_sv2v_neg3.v
+    # a_busy forced to 0: the adapter issues whatever the controller is doing
+    cp build/nj_sv2v.v build/nj_sv2v_neg4.v
+    patch "assign a_busy = ((s_busy | v_rw_req) | rf_hold) | a_closed;" "assign a_busy = 1'b0;" build/nj_sv2v_neg4.v
+    for n in 1 2 3 4; do NETLIST=build/nj_sv2v_neg$n.v comp neg$n -Ptb_nj_board.SHORT=1; done
+}
+negverdict() {
+    local n=0 npass=0 failed="" name
+    for name in neg1 neg2 neg3 neg4; do
+        n=$((n + 1))
+        echo "-- $name: $(grep -a -c 'FAIL\]' build/$name.log) FAIL lines"
+        grep -a 'FAIL\]\|RESULTADO\|ranuras de VRAM perdidas' build/$name.log | head -8
+        if grep -a -q "RESULTADO: FAIL" build/$name.log; then npass=$((npass + 1)); else failed="$failed $name"; fi
+    done
+    echo "run_board neg: $npass/$n negative controls detected${failed:+ (NOT detected:$failed)}"
+    [ "$npass" = "$n" ]
+}
 case "$MODE" in
     main)  comp main; run main; show main; verdict main ;;
-    blank) comp blank -Ptb_nj_board.BLANK=1; run blank; show blank; verdict blank ;;
-    all)   comp main; comp blank -Ptb_nj_board.BLANK=1
-           run main & run blank & wait
-           show main; show blank; verdict main blank ;;
-    hdmi)
-        # Negative controls: (neg) the FM R bar is fed from the wave R signal;
-        # (neg2) the wave L and wave R bars are swapped (the bench pans the
-        # wave so that they differ). The meter model (fed from each bar's own
-        # source) must then disagree, and that must be the only failing check.
-        cp build/nj_sv2v.v build/nj_sv2v_neg.v
-        patch "opl4_vu_wave_r, opl4_vu_wave_l, opl4_vu_fm_r, opl4_vu_fm_l" \
-              "opl4_vu_wave_r, opl4_vu_wave_l, opl4_vu_wave_r, opl4_vu_fm_l" build/nj_sv2v_neg.v
-        cp build/nj_sv2v.v build/nj_sv2v_neg2.v
-        patch "opl4_vu_wave_r, opl4_vu_wave_l, opl4_vu_fm_r, opl4_vu_fm_l" \
-              "opl4_vu_wave_l, opl4_vu_wave_r, opl4_vu_fm_r, opl4_vu_fm_l" build/nj_sv2v_neg2.v
-        rm -rf build/hdmi_*.ppm build/hdmi*_frames*.txt build/png build/png_bad
-        EXTRA=../common/hdmi_rx_check.v comp hdmi -DWITH_HDMI -DHDMI_TAG=\"hdmi\"
-        EXTRA=../common/hdmi_rx_check.v NETLIST=build/nj_sv2v_neg.v comp hdmi_neg -DWITH_HDMI -DHDMI_TAG=\"hdmi_neg\"
-        EXTRA=../common/hdmi_rx_check.v NETLIST=build/nj_sv2v_neg2.v comp hdmi_neg2 -DWITH_HDMI -DHDMI_TAG=\"hdmi_neg2\"
-        run hdmi & run hdmi_neg & run hdmi_neg2 & wait
-        show hdmi
-        echo "################ vu_check.py: the VU frames on the cable against the model ################"
-        FOOT=$(sed -n 's/^ *"\(NEW JUICE MOONSOUND[^"]*\)";.*/\1/p' "$R/src/top.v")
-        VU="python3 ../vu/vu_check.py build"
-        $VU build/png "$R/src/moonsound/font8x8.v" --list hdmi_frames.txt \
-            --title "NEW JUICE" --sub "+ MOONSOUND OPL4" --foot "$FOOT" | tee build/hdmi_check.log || true
-        # the checker itself must see a one-segment error in one bar
-        awk '{ if (NF == 15) $2 = ($2 + 1) % 29; print }' build/hdmi_frames.txt > build/hdmi_frames_bad.txt
-        $VU build/png_bad "$R/src/moonsound/font8x8.v" --list hdmi_frames_bad.txt \
-            --title "NEW JUICE" --sub "+ MOONSOUND OPL4" --foot "$FOOT" > build/hdmi_check_bad.log 2>&1 || true
-        echo "################ negative control: FM R bar fed from wave R ################"
-        grep -a "FAIL\]\|RESULTADO\|(vumetro)\|modelo del medidor" build/hdmi_neg.log | tail -12
-        echo "################ negative control 2: wave L and wave R bars swapped ################"
-        grep -a "FAIL\]\|RESULTADO\|(vumetro)\|modelo del medidor" build/hdmi_neg2.log | tail -12
-        n=0; npass=0; failed=""
-        n=$((n+1)); if grep -a -q "RESULTADO: PASS" build/hdmi.log; then npass=$((npass+1)); else failed="$failed hdmi"; fi
-        n=$((n+1)); if grep -q "^MODELO: 2 cuadros .*PASS" build/hdmi_check.log; then npass=$((npass+1)); else failed="$failed vu_check"; fi
-        n=$((n+1)); if grep -q "^MODELO: .*FAIL" build/hdmi_check_bad.log; then npass=$((npass+1)); else failed="$failed vu_check_neg"; fi
-        n=$((n+1)); if grep -a -q "RESULTADO: FAIL" build/hdmi_neg.log && grep -a -q "FAIL\] vumetro: las barras" build/hdmi_neg.log \
-                       && [ "$(grep -a -c 'FAIL\]' build/hdmi_neg.log)" = 1 ]; then npass=$((npass+1)); else failed="$failed hdmi_neg"; fi
-        n=$((n+1)); if grep -a -q "RESULTADO: FAIL" build/hdmi_neg2.log && grep -a -q "FAIL\] vumetro: las barras" build/hdmi_neg2.log \
-                       && [ "$(grep -a -c 'FAIL\]' build/hdmi_neg2.log)" = 1 ]; then npass=$((npass+1)); else failed="$failed hdmi_neg2"; fi
-        echo "run_board: $npass/$n PASS${failed:+ (failed:$failed)}"
-        echo "  (hdmi bench; vu_check of its frames; vu_check of a wrong level must FAIL; both negative controls must FAIL, on the meter check only)"
-        [ "$npass" = "$n" ] ;;
-    diff)
-        # the reference design: REF's sources (its submodules, which git
-        # archive leaves out, are taken from this tree: they are not changed)
-        REF=${REF:-4730f9c}
-        rm -rf build/ref && mkdir -p build/ref
-        git -C "$R" -c safe.directory='*' archive "$REF" src new-juice.gprj | tar -x -C build/ref
-        for s in src/jt49 src/jt51 src/jtopl; do rm -rf build/ref/$s; cp -r "$R/$s" build/ref/$s; rm -f build/ref/$s/.git; done
-        convert "$PWD/build/ref" build/nj_sv2v_ref.v
-        shortcuts build/nj_sv2v_ref.v
-        python3 gen_pins_nj.py build/ref/src/top.v build/ref/src/top.cst build/nj_pins_ref.v
-        echo "reference: $REF ($(git -C "$R" -c safe.directory='*' log --oneline -1 "$REF"))"
-        comp main
-        PINS=build/nj_pins_ref.v NETLIST=build/nj_sv2v_ref.v comp ref
-        run main & run ref & wait
-        show main; show ref
-        echo "################ bus timing at the slot, $REF (ref) and this tree (main) ################"
-        for name in ref main; do echo "-- $name"; grep -a "\[bus\]" build/$name.log; done
-        echo "################ cyc_diff.py: ref -> main ################"
-        rc=0; python3 cyc_diff.py build/ref.cyc build/main.cyc || rc=$?
-        verdict main ref && [ $rc = 0 ] ;;
+    video) comp video -DWITH_VIDEO; run video; show video; verdict video ;;
+    neg)   negs; run neg1 & run neg2 & run neg3 & run neg4 & wait; negverdict ;;
+    all)   comp main; comp video -DWITH_VIDEO; negs
+           run main & run video & run neg1 & run neg2 & run neg3 & run neg4 & wait
+           show main; show video
+           rcv=0; verdict main video || rcv=$?
+           rcn=0; negverdict || rcn=$?
+           [ $rcv = 0 ] && [ $rcn = 0 ] ;;
     *)     echo "unknown mode: $MODE"; exit 2 ;;
 esac

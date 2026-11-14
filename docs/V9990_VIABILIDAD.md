@@ -5,6 +5,13 @@ todavía. Las cifras salen de los informes de Gowin 1.9.12.03 que ya había en
 los dos repositorios: New Juice MoonSound v1.1 (`impl/`, 16 oct 2026) y
 V9990TANG 0.3beta (`fpga/reports/v0.3beta/`, `fpga/impl/`).
 
+> **Nota posterior (mismo día):** el port está hecho; el resultado real está
+> en [V9990.md](V9990.md). Dos cifras de este informe quedaron cortas: el
+> chip acaba al 98 % de CLS (10 060), no al 93-95 %, y la CPU puede esperar a
+> la SDRAM hasta 231 ns a 3,58 MHz, no 83 ns (el V9990 tiene tres ciclos de
+> cada veinte reservados, además de su acceso). A 3,58 MHz sigue cabiendo; a
+> 5,37 MHz no.
+
 **Conclusión: es viable.** Cabe, la SDRAM de New Juice sirve con un cambio
 acotado, los relojes coinciden y el bus no pone pegas. El trabajo gordo es un
 árbitro nuevo de SDRAM y adaptar el controlador para los accesos de 64 bits

@@ -1,3 +1,9 @@
+> **Branch `v9990` (private, experimental, not tried on a board):** the
+> MoonSound, the SFG-01, the debugger and the VU meter are out and a V9990
+> (GFX9000) with DVI output is in; the mapper is 4 MB again. Read
+> [docs/V9990.md](docs/V9990.md) first: what follows describes the
+> `moonsound` branch and upstream New Juice.
+
 > **NewJuice-MoonSound v1.1 (private, experimental):** Franky is replaced by
 > a MoonSound (OPL4) and the mapper is 2 MB. Read [FORK.md](FORK.md) before
 > using anything below. For the files and exact external-flash addresses,
