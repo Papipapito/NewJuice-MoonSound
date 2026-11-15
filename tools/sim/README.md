@@ -1,8 +1,9 @@
 # Simulation benches (New Juice V9990 fork)
 
 Run them in a Linux shell (they were written for WSL Ubuntu-24.04) with
-Icarus Verilog 12 and, for the board bench, `sv2v` (0.0.13). Nothing here is
-part of the FPGA build. Results and what is not simulated:
+Icarus Verilog 12 and, for the board bench, `sv2v` (0.0.13), python3 and the
+simulation library of Gowin 1.9.12.03 (`prim_sim.v`; `GOWIN_SIMLIB` gives
+its path). Nothing here is part of the FPGA build. Results and what is not simulated:
 `docs/V9990.md`.
 
 | Bench | What it proves | How to run |
@@ -16,12 +17,15 @@ part of the FPGA build. Results and what is not simulated:
 
 `blocks/tb_arb.v`, `blocks/tb_map.v` (the `arb`, `refresh` and `map` modes of
 `run_blocks.sh`) and `vu/` belong to the MoonSound of the `moonsound` branch,
-which is not in this build: they are not maintained here.
+which is not in this build: they are not maintained here. `run_blocks.sh`
+without an argument still runs them: use `i2s` and `opll` only.
 
-Both scripts compile every bench afresh (an old `build/*.vvp` is deleted
-before compiling, never reused), print `run_blocks: n/n PASS` or
-`run_board: n/n PASS`, and exit with a non-zero status when a bench does not
-compile or its log does not end in `RESULTADO: PASS`.
+The three scripts compile every bench afresh (an old `build/*.vvp` is deleted
+before compiling, never reused), print `run_varb: n/n PASS`,
+`run_blocks: n/n PASS` or `run_board: n/n PASS`, and exit with a non-zero
+status when a bench does not compile or its log has no `RESULTADO: PASS`.
+The negative controls are the other way round: each must give
+`RESULTADO: FAIL` (`run_board neg: n/n negative controls detected`).
 
 `run_board.sh` shortens a few start-up delays in the **converted netlist**
 (automatic S1 pulse, SDRAM start-up test length, ROM copy length) and works
