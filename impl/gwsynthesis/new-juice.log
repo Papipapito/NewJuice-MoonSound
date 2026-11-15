@@ -1,350 +1,245 @@
 GowinSynthesis start
 Running parser ...
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/cd_demux.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/clockdiv.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/cpu_step_debugger.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/audio_drive.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/crc16.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/dpram.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/flash_roms.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/input_debouncer.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC_modules/IKASCC_primitives.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC_modules/IKASCC_vrc_s.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC_modules/IKASCC_vrc_a.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC_modules/IKASCC_player_s.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC_modules/IKASCC_player_a.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/mp_debouncer.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt49/hdl/jt49.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt49/hdl/jt49_bus.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt49/hdl/jt49_div.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt49/hdl/jt49_cen.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt49/hdl/jt49_eg.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt49/hdl/jt49_exp.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt49/hdl/jt49_noise.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_acc.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_eg.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_exp2lin.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_exprom.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_kon.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_lfo.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_lin2exp.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_mmr.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_mod.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_noise_lfsr.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_noise.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_op.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_pg.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_phinc_rom.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_phrom.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_pm.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_reg.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_timers.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_reg_ch.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_csr_op.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_acc.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_csr.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_div.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_eg.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_eg_cnt.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_eg_comb.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_eg_ctrl.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_eg_final.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_eg_pure.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_eg_step.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_exprom.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_lfo.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_logsin.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_noise.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_op.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_pg.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_pg_comb.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_pg_inc.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_pg_rhy.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_pg_sum.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_pm.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_reg_ch.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh_rst.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_single_acc.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_slot_cnt.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_timers.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopll_mmr.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopll_reg.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopll_reg_ch.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jt2413.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/rpll/rpll_main.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/rpll/rpll_video.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/SMS/jt89/jt89_mixer.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/SMS/jt89/jt89_noise.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/SMS/jt89/jt89_tone.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/SMS/jt89/jt89_vol.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/SMS/jt89/jt89.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/hdmi/audio_clock_regeneration_packet.sv'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/hdmi/audio_info_frame.sv'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/hdmi/audio_sample_packet.sv'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/hdmi/auxiliary_video_information_info_frame.sv'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/hdmi/source_product_description_info_frame.sv'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/hdmi/packet_assembler.sv'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/hdmi/packet_picker.sv'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/hdmi/tmds_channel.sv'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/hdmi/hdmi.sv'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/hdmi/serializer.sv'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/sd_reader.sv'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/sd_registers.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/sdcmd_ctrl.sv'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/sdram.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/sdram_command_adapter.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/sdram_mapper.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/linear_rom.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/debug_trace_terminal.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/sdram_startup_test.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/slot_expander.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/sound_scope.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/spi_flash_reader.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/super_megaram.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/new-juice/src/top.v'
-Analyzing VHDL file '/Users/felipe/src/fpga/new-juice/src/SMS/vdp_background.vhd'
-Analyzing entity 'vdp_background'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_background.vhd":6)
-Analyzing architecture 'rtl'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_background.vhd":30)
-Analyzing VHDL file '/Users/felipe/src/fpga/new-juice/src/SMS/vdp_sprite_shifter.vhd'
-Analyzing entity 'vpd_sprite_shifter'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_sprite_shifter.vhd":6)
-Analyzing architecture 'behavioral'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_sprite_shifter.vhd":26)
-Analyzing VHDL file '/Users/felipe/src/fpga/new-juice/src/SMS/vdp_sprites.vhd'
-Analyzing entity 'vdp_sprites'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_sprites.vhd":6)
-Analyzing architecture 'behavioral'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_sprites.vhd":33)
-WARN  (EX4557) : Actual for formal port 'load' is neither a static name nor a globally static expression("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_sprites.vhd":79)
-WARN  (EX4557) : Actual for formal port 'x248' is neither a static name nor a globally static expression("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_sprites.vhd":80)
-WARN  (EX4557) : Actual for formal port 'x224' is neither a static name nor a globally static expression("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_sprites.vhd":81)
-WARN  (EX4557) : Actual for formal port 'm4' is neither a static name nor a globally static expression("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_sprites.vhd":82)
-WARN  (EX4557) : Actual for formal port 'wide_n' is neither a static name nor a globally static expression("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_sprites.vhd":83)
-Analyzing VHDL file '/Users/felipe/src/fpga/new-juice/src/SMS/vdp_main.vhd'
-Analyzing entity 'vdp_main'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_main.vhd":6)
-Analyzing architecture 'behavioral'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_main.vhd":51)
-Analyzing VHDL file '/Users/felipe/src/fpga/new-juice/src/SMS/vdp_cram.vhd'
-Analyzing entity 'vdp_cram'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_cram.vhd":5)
-Analyzing architecture 'behavioral'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_cram.vhd":16)
-Analyzing VHDL file '/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd'
-Analyzing entity 'vdp'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":6)
-Analyzing architecture 'behavioral'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":35)
-Analyzing VHDL file '/Users/felipe/src/fpga/new-juice/src/SMS/video.vhd'
-Analyzing entity 'video'("/Users/felipe/src/fpga/new-juice/src/SMS/video.vhd":6)
-Analyzing architecture 'behavioral'("/Users/felipe/src/fpga/new-juice/src/SMS/video.vhd":25)
-WARN  (EX3073) : Port 'clkoutd' remains unconnected for this instance("/Users/felipe/src/fpga/new-juice/src/top.v":379)
-Compiling module 'top'("/Users/felipe/src/fpga/new-juice/src/top.v":1)
-Compiling module 'clockdiv'("/Users/felipe/src/fpga/new-juice/src/clockdiv.v":33)
-Compiling module 'audio_drive'("/Users/felipe/src/fpga/new-juice/src/audio_drive.v":1)
-Compiling module 'rpll_main'("/Users/felipe/src/fpga/new-juice/src/rpll/rpll_main.v":10)
-Compiling module 'rpll_video'("/Users/felipe/src/fpga/new-juice/src/rpll/rpll_video.v":10)
-Compiling module 'clockdiv2'("/Users/felipe/src/fpga/new-juice/src/clockdiv.v":1)
-Compiling module 'jt49_bus(MUTE_NULL_PERIOD=1'b0)'("/Users/felipe/src/fpga/new-juice/src/jt49/hdl/jt49_bus.v":26)
-Compiling module 'jt49(MUTE_NULL_PERIOD=1'b0)'("/Users/felipe/src/fpga/new-juice/src/jt49/hdl/jt49.v":24)
-Compiling module 'jt49_cen'("/Users/felipe/src/fpga/new-juice/src/jt49/hdl/jt49_cen.v":24)
-Compiling module 'jt49_div(MUTE_NULL_PERIOD=1'b0)'("/Users/felipe/src/fpga/new-juice/src/jt49/hdl/jt49_div.v":25)
-Compiling module 'jt49_noise(MUTE_NULL_PERIOD=1'b0)'("/Users/felipe/src/fpga/new-juice/src/jt49/hdl/jt49_noise.v":25)
-Compiling module 'jt49_div(W=5,MUTE_NULL_PERIOD=1'b0)'("/Users/felipe/src/fpga/new-juice/src/jt49/hdl/jt49_div.v":25)
-Compiling module 'jt49_div(W=16)'("/Users/felipe/src/fpga/new-juice/src/jt49/hdl/jt49_div.v":25)
-Compiling module 'jt49_eg'("/Users/felipe/src/fpga/new-juice/src/jt49/hdl/jt49_eg.v":24)
-Compiling module 'jt49_exp'("/Users/felipe/src/fpga/new-juice/src/jt49/hdl/jt49_exp.v":30)
-Extracting RAM for identifier 'lut'("/Users/felipe/src/fpga/new-juice/src/jt49/hdl/jt49_exp.v":37)
-Compiling module 'jt2413'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jt2413.v":22)
-Compiling module 'jtopll_mmr(OPL_TYPE=11)'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopll_mmr.v":21)
-Compiling module 'jtopl_div(OPL_TYPE=11)'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_div.v":22)
-Compiling module 'jtopll_reg'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopll_reg.v":22)
-Compiling module 'jtopl_slot_cnt'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_slot_cnt.v":22)
-Compiling module 'jtopl_sh_rst(width=9,stages=3)'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh_rst.v":22)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh_rst.v":32)
-Compiling module 'jtopll_reg_ch'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopll_reg_ch.v":22)
-Compiling module 'jtopl_lfo'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_lfo.v":27)
-Compiling module 'jtopl_pg'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_pg.v":22)
-Compiling module 'jtopl_noise'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_noise.v":27)
-Compiling module 'jtopl_pg_comb'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_pg_comb.v":22)
-Compiling module 'jtopl_pm'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_pm.v":23)
-Compiling module 'jtopl_pg_inc'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_pg_inc.v":22)
-Compiling module 'jtopl_pg_sum'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_pg_sum.v":26)
-Extracting RAM for identifier 'factor'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_pg_sum.v":37)
-Compiling module 'jtopl_pg_rhy'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_pg_rhy.v":22)
-Compiling module 'jtopl_sh_rst(width=19)'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh_rst.v":22)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh_rst.v":32)
-Compiling module 'jtopl_sh_rst(width=10,stages=2)'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh_rst.v":22)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh_rst.v":32)
-Compiling module 'jtopl_eg'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_eg.v":22)
-Compiling module 'jtopl_eg_cnt'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_eg_cnt.v":22)
-Compiling module 'jtopl_eg_comb'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_eg_comb.v":22)
-Compiling module 'jtopl_eg_ctrl'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_eg_ctrl.v":22)
-Compiling module 'jtopl_eg_step'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_eg_step.v":22)
-Compiling module 'jtopl_eg_pure'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_eg_pure.v":22)
-Compiling module 'jtopl_eg_final'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_eg_final.v":22)
-Extracting RAM for identifier 'ksl_lut'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_eg_final.v":38)
-Compiling module 'jtopl_sh(width=1,stages=18)'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh.v":22)
-Compiling module 'jtopl_sh(width=4,stages=3)'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh.v":22)
-Compiling module 'jtopl_sh(width=3,stages=3)'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh.v":22)
-Compiling module 'jtopl_sh_rst(width=10,stages=15,rstval=1'b1)'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh_rst.v":22)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh_rst.v":32)
-Compiling module 'jtopl_sh_rst(width=3,rstval=1'b1)'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh_rst.v":22)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh_rst.v":32)
-Compiling module 'jtopl_sh_rst(width=1)'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh_rst.v":22)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh_rst.v":32)
-Compiling module 'jtopl_op(OPL_TYPE=11)'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_op.v":26)
-Compiling module 'jtopl_sh(width=9,stages=3)'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh.v":22)
-Compiling module 'jtopl_sh(width=2,stages=3)'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh.v":22)
-Compiling module 'jtopl_sh(width=26,stages=3)'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_sh.v":22)
-Compiling module 'jtopl_logsin'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_logsin.v":26)
-Extracting RAM for identifier 'sinelut'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_logsin.v":33)
-Compiling module 'jtopl_exprom'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_exprom.v":33)
-Extracting RAM for identifier 'explut_jt51'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_exprom.v":41)
-Compiling module 'jtopl_acc'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_acc.v":23)
-Compiling module 'jtopl_single_acc(INW=14,OUTW=16)'("/Users/felipe/src/fpga/new-juice/src/jtopl/hdl/jtopl_single_acc.v":26)
-Compiling module 'jt51'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51.v":24)
-Compiling module 'jt51_timers'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_timers.v":21)
-Compiling module 'jt51_timer(CW=10)'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_timers.v":68)
-Compiling module 'jt51_timer(FREE_EN=1)'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_timers.v":68)
-Compiling module 'jt51_lfo'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_lfo.v":21)
-Extracting RAM for identifier 'lfo_lut'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_lfo.v":49)
-Compiling module 'jt51_pg'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_pg.v":22)
-Compiling module 'jt51_phinc_rom'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_phinc_rom.v":22)
-Compiling module 'jt51_pm'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_pm.v":22)
-Compiling module 'jt51_sh(width=20,stages=29)'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":25)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":41)
-Compiling module 'jt51_sh(width=1,stages=4)'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":25)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":41)
-Compiling module 'jt51_eg'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_eg.v":22)
-Compiling module 'jt51_sh(width=10,stages=3)'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":25)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":41)
-Compiling module 'jt51_sh(width=10,stages=27,rstval=1'b1)'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":25)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":41)
-Compiling module 'jt51_sh(width=10,stages=4,rstval=1'b1)'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":25)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":41)
-Compiling module 'jt51_sh(width=1)'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":25)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":41)
-Compiling module 'jt51_sh(width=2,stages=31,rstval=1'b1)'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":25)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":41)
-Compiling module 'jt51_op'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_op.v":24)
-Compiling module 'jt51_sh(width=14,stages=8)'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":25)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":41)
-Compiling module 'jt51_sh(width=10,stages=8)'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":25)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":41)
-Compiling module 'jt51_phrom'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_phrom.v":27)
-Extracting RAM for identifier 'sinetable'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_phrom.v":35)
-Compiling module 'jt51_exprom'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_exprom.v":28)
-Extracting RAM for identifier 'explut'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_exprom.v":36)
-Compiling module 'jt51_sh(width=14,stages=4)'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":25)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":41)
-Compiling module 'jt51_sh(width=1,stages=3)'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":25)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":41)
-Compiling module 'jt51_noise'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_noise.v":40)
-Compiling module 'jt51_acc'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_acc.v":22)
-Compiling module 'jt51_sh(width=16,stages=8)'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":25)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":41)
-Compiling module 'jt51_exp2lin'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_exp2lin.v":22)
-Compiling module 'jt51_lin2exp'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_lin2exp.v":22)
-Compiling module 'jt51_mmr'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_mmr.v":22)
-Compiling module 'jt51_reg'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_reg.v":22)
-Compiling module 'jt51_kon'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_kon.v":25)
-Compiling module 'jt51_mod'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_mod.v":25)
-Compiling module 'jt51_csr_op'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_csr_op.v":21)
-Compiling module 'jt51_sh(width=31)'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":25)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":41)
-Compiling module 'jt51_sh(width=11,rstval=1'b1)'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":25)
-WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_sh.v":41)
-Compiling module 'jt51_reg_ch'("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_reg_ch.v":27)
-Compiling module 'jt89'("/Users/felipe/src/fpga/new-juice/src/SMS/jt89/jt89.v":33)
-Compiling module 'jt89_mixer'("/Users/felipe/src/fpga/new-juice/src/SMS/jt89/jt89_mixer.v":22)
-Compiling module 'jt89_tone'("/Users/felipe/src/fpga/new-juice/src/SMS/jt89/jt89_tone.v":25)
-Compiling module 'jt89_vol'("/Users/felipe/src/fpga/new-juice/src/SMS/jt89/jt89_vol.v":25)
-Compiling module 'jt89_noise'("/Users/felipe/src/fpga/new-juice/src/SMS/jt89/jt89_noise.v":25)
-Switching to VHDL mode to elaborate design unit 'vdp'("/Users/felipe/src/fpga/new-juice/src/top.v":1116)
-Processing 'vdp(Behavioral)'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":6)
-Processing 'vdp_main(Behavioral)'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_main.vhd":6)
-Processing 'vdp_background(rtl)'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_background.vhd":6)
-Processing 'vdp_sprites(Behavioral)'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_sprites.vhd":6)
-Processing 'vpd_sprite_shifter(Behavioral)'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_sprite_shifter.vhd":6)
-WARN  (EX4800) : Range is empty (null range)("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_sprites.vhd":286)
-Switching to Verilog mode to elaborate module 'dpram'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":181)
-Compiling module 'dpram(widthad_a=14)'("/Users/felipe/src/fpga/new-juice/src/dpram.v":1)
-Extracting RAM for identifier 'mem_r'("/Users/felipe/src/fpga/new-juice/src/dpram.v":23)
-Returning to VHDL mode to continue with elaboration("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":181)
-Processing 'vdp_cram(Behavioral)'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_cram.vhd":5)
-Extracting RAM for identifier 'ram'("/Users/felipe/src/fpga/new-juice/src/SMS/vdp_cram.vhd":19)
-Returning to Verilog mode to proceed with elaboration("/Users/felipe/src/fpga/new-juice/src/top.v":1116)
-Switching to VHDL mode to elaborate design unit 'video'("/Users/felipe/src/fpga/new-juice/src/top.v":1138)
-Processing 'video(Behavioral)'("/Users/felipe/src/fpga/new-juice/src/SMS/video.vhd":6)
-Returning to Verilog mode to proceed with elaboration("/Users/felipe/src/fpga/new-juice/src/top.v":1138)
-Compiling module 'sound_scope'("/Users/felipe/src/fpga/new-juice/src/sound_scope.v":1)
-Compiling module 'dpram(widthad_a=16,width_a=6)'("/Users/felipe/src/fpga/new-juice/src/dpram.v":1)
-Extracting RAM for identifier 'mem_r'("/Users/felipe/src/fpga/new-juice/src/dpram.v":23)
-Compiling module 'debug_trace_terminal'("/Users/felipe/src/fpga/new-juice/src/debug_trace_terminal.v":1)
-Compiling module 'dpram(widthad_a=10,width_a=6)'("/Users/felipe/src/fpga/new-juice/src/dpram.v":1)
-Extracting RAM for identifier 'mem_r'("/Users/felipe/src/fpga/new-juice/src/dpram.v":23)
-Compiling module 'clockdiv(OUT_HZ=44100)'("/Users/felipe/src/fpga/new-juice/src/clockdiv.v":33)
-Compiling module 'hdmi(VIDEO_ID_CODE=2,VIDEO_REFRESH_RATE=60.0,VENDOR_NAME=64'b0101010101101110011010110110111001101111011101110110111000000000,PRODUCT_DESCRIPTION=128'b01000110011100100110000101101110011010110111100100100000010100110100110101010011000000000000000000000000000000000000000000000000)'("/Users/felipe/src/fpga/new-juice/src/hdmi/hdmi.sv":4)
-Compiling module 'packet_picker(VIDEO_ID_CODE=2,VIDEO_RATE=27027000.0,IT_CONTENT=1'b1,AUDIO_BIT_WIDTH=16,AUDIO_RATE=44100,VENDOR_NAME=64'b0101010101101110011010110110111001101111011101110110111000000000,PRODUCT_DESCRIPTION=128'b01000110011100100110000101101110011010110111100100100000010100110100110101010011000000000000000000000000000000000000000000000000,SOURCE_DEVICE_INFORMATION=8'b00000000)'("/Users/felipe/src/fpga/new-juice/src/hdmi/packet_picker.sv":4)
-Extracting RAM for identifier 'audio_sample_word_buffer'("/Users/felipe/src/fpga/new-juice/src/hdmi/packet_picker.sv":108)
-Compiling module 'audio_clock_regeneration_packet(VIDEO_RATE=27027000.0,AUDIO_RATE=44100)'("/Users/felipe/src/fpga/new-juice/src/hdmi/audio_clock_regeneration_packet.sv":5)
-Compiling module 'audio_sample_packet(WORD_LENGTH=4'b0010)'("/Users/felipe/src/fpga/new-juice/src/hdmi/audio_sample_packet.sv":8)
-WARN  (EX3780) : Using initial value of 'CHANNEL_LEFT' since it is never assigned("/Users/felipe/src/fpga/new-juice/src/hdmi/audio_sample_packet.sv":63)
-WARN  (EX3780) : Using initial value of 'CHANNEL_RIGHT' since it is never assigned("/Users/felipe/src/fpga/new-juice/src/hdmi/audio_sample_packet.sv":64)
-Compiling module 'auxiliary_video_information_info_frame(IT_CONTENT=1'b1,VIDEO_ID_CODE=32'sb00000000000000000000000000000010)'("/Users/felipe/src/fpga/new-juice/src/hdmi/auxiliary_video_information_info_frame.sv":5)
-Compiling module 'source_product_description_info_frame(VENDOR_NAME=64'b0101010101101110011010110110111001101111011101110110111000000000,PRODUCT_DESCRIPTION=128'b01000110011100100110000101101110011010110111100100100000010100110100110101010011000000000000000000000000000000000000000000000000,SOURCE_DEVICE_INFORMATION=8'b00000000)'("/Users/felipe/src/fpga/new-juice/src/hdmi/source_product_description_info_frame.sv":5)
-Compiling module 'audio_info_frame'("/Users/felipe/src/fpga/new-juice/src/hdmi/audio_info_frame.sv":5)
-Compiling module 'packet_assembler'("/Users/felipe/src/fpga/new-juice/src/hdmi/packet_assembler.sv":4)
-Compiling module 'tmds_channel'("/Users/felipe/src/fpga/new-juice/src/hdmi/tmds_channel.sv":4)
-Compiling module 'tmds_channel(CN=1)'("/Users/felipe/src/fpga/new-juice/src/hdmi/tmds_channel.sv":4)
-Compiling module 'tmds_channel(CN=2)'("/Users/felipe/src/fpga/new-juice/src/hdmi/tmds_channel.sv":4)
-Compiling module 'serializer(VIDEO_RATE=0)'("/Users/felipe/src/fpga/new-juice/src/hdmi/serializer.sv":3)
-Compiling module 'input_debouncer(WIDTH=3)'("/Users/felipe/src/fpga/new-juice/src/input_debouncer.v":1)
-Compiling module 'input_debouncer(WIDTH=8)'("/Users/felipe/src/fpga/new-juice/src/input_debouncer.v":1)
-Compiling module 'mp_debouncer'("/Users/felipe/src/fpga/new-juice/src/mp_debouncer.v":1)
-Compiling module 'cpu_step_debugger'("/Users/felipe/src/fpga/new-juice/src/cpu_step_debugger.v":1)
-Compiling module 'slot_expander'("/Users/felipe/src/fpga/new-juice/src/slot_expander.v":1)
-Compiling module 'sdram_startup_test'("/Users/felipe/src/fpga/new-juice/src/sdram_startup_test.v":1)
-Compiling module 'sdram_mapper'("/Users/felipe/src/fpga/new-juice/src/sdram_mapper.v":1)
-Compiling module 'super_megaram(INCLUDE_SCC=1'b1,DEBUGGER_ENABLED=1'b1)'("/Users/felipe/src/fpga/new-juice/src/super_megaram.v":1)
-Compiling module 'IKASCC(IMPL_TYPE=1)'("/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC.v":1)
-Compiling module 'IKASCC_vrc_s(RAMCTRL_ASYNC=1)'("/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC_modules/IKASCC_vrc_s.v":1)
-Compiling module 'IKASCC_player_s(RAMCTRL_ASYNC=1)'("/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC_modules/IKASCC_player_s.v":1)
-Compiling module 'IKASCC_player_memory_s'("/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC_modules/IKASCC_player_s.v":670)
-Extracting RAM for identifier 'wavetable_ram'("/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC_modules/IKASCC_player_s.v":694)
-Compiling module 'IKASCC_player_control_s(RAMCTRL_ASYNC=1,ADDR_FREQ_BASE=8'h80,ADDR_VOL=8'h8A,ADDR_MUTE=8'h8F)'("/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC_modules/IKASCC_player_s.v":372)
-Compiling module 'IKASCC_primitive_dncntr'("/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC_modules/IKASCC_primitives.v":1)
-Compiling module 'IKASCC_primitive_dncntr(W=5)'("/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC_modules/IKASCC_primitives.v":1)
-Compiling module 'IKASCC_player_control_s(RAMCTRL_ASYNC=1,ADDR_RAM_BASE=8'h20,ADDR_FREQ_BASE=8'h82,ADDR_VOL=8'h8B,ADDR_MUTE=8'h8F,BIT_MUTE=1)'("/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC_modules/IKASCC_player_s.v":372)
-Compiling module 'IKASCC_player_control_s(RAMCTRL_ASYNC=1,ADDR_RAM_BASE=8'h40,ADDR_FREQ_BASE=8'h84,ADDR_VOL=8'h8C,ADDR_MUTE=8'h8F,BIT_MUTE=2)'("/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC_modules/IKASCC_player_s.v":372)
-Compiling module 'IKASCC_player_control_s(RAMCTRL_ASYNC=1,ADDR_RAM_BASE=8'h60,ADDR_FREQ_BASE=8'h86,ADDR_VOL=8'h8D,ADDR_MUTE=8'h8F,BIT_MUTE=3)'("/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC_modules/IKASCC_player_s.v":372)
-Compiling module 'IKASCC_player_control_s(RAMCTRL_ASYNC=1,ADDR_RAM_BASE=8'h60,ADDR_FREQ_BASE=8'h88,ADDR_VOL=8'h8E,ADDR_MUTE=8'h8F,BIT_MUTE=4)'("/Users/felipe/src/fpga/new-juice/src/IKASCC/IKASCC_modules/IKASCC_player_s.v":372)
-Compiling module 'linear_rom'("/Users/felipe/src/fpga/new-juice/src/linear_rom.v":1)
-Compiling module 'sd_registers'("/Users/felipe/src/fpga/new-juice/src/sd_registers.v":1)
-Compiling module 'dpram(widthad_a=9)'("/Users/felipe/src/fpga/new-juice/src/dpram.v":1)
-Extracting RAM for identifier 'mem_r'("/Users/felipe/src/fpga/new-juice/src/dpram.v":23)
-Compiling module 'sd_reader'("/Users/felipe/src/fpga/new-juice/src/sd_reader.sv":11)
-WARN  (EX3791) : Expression size 5 truncated to fit in target size 4("/Users/felipe/src/fpga/new-juice/src/sd_reader.sv":125)
-Compiling module 'sdcmd_ctrl'("/Users/felipe/src/fpga/new-juice/src/sdcmd_ctrl.sv":10)
-WARN  (EX3771) : Module instantiation should have an instance name("/Users/felipe/src/fpga/new-juice/src/sd_reader.sv":304)
-Compiling module 'sd_crc_16'("/Users/felipe/src/fpga/new-juice/src/crc16.v":5)
-Compiling module 'flash_roms'("/Users/felipe/src/fpga/new-juice/src/flash_roms.v":1)
-Compiling module 'spi_flash_reader'("/Users/felipe/src/fpga/new-juice/src/spi_flash_reader.v":1)
-Compiling module 'cd_demux'("/Users/felipe/src/fpga/new-juice/src/cd_demux.v":1)
-Compiling module 'sdram_command_adapter'("/Users/felipe/src/fpga/new-juice/src/sdram_command_adapter.v":1)
-Compiling module 'sdram'("/Users/felipe/src/fpga/new-juice/src/sdram.v":27)
-WARN  (EX3791) : Expression size 16 truncated to fit in target size 15("/Users/felipe/src/fpga/new-juice/src/sdram.v":285)
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\cd_demux.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\clockdiv.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\audio_drive.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\crc16.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\dpram.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\flash_roms.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\input_debouncer.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC_modules\IKASCC_primitives.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC_modules\IKASCC_vrc_s.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC_modules\IKASCC_vrc_a.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC_modules\IKASCC_player_s.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC_modules\IKASCC_player_a.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\mp_debouncer.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jt49\hdl\jt49.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jt49\hdl\jt49_bus.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jt49\hdl\jt49_div.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jt49\hdl\jt49_cen.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jt49\hdl\jt49_eg.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jt49\hdl\jt49_exp.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jt49\hdl\jt49_noise.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_acc.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_csr.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_div.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_eg.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_eg_cnt.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_eg_comb.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_eg_ctrl.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_eg_final.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_eg_pure.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_eg_step.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_exprom.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_lfo.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_logsin.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_noise.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_op.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_pg.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_pg_comb.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_pg_inc.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_pg_rhy.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_pg_sum.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_pm.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_reg_ch.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh_rst.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_single_acc.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_slot_cnt.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_timers.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopll_mmr.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopll_reg.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopll_reg_ch.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jt2413.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\rpll\rpll_main.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\rpll\rpll_video.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\sd_reader.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\sd_registers.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\sdcmd_ctrl.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\sdram.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\sdram_command_adapter.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\sdram_mapper.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\linear_rom.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\sdram_startup_test.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\slot_expander.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\spi_flash_reader.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\super_megaram.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\v9990_config.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\ram.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\video.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_port.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_bitmap.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_blit.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_blit_addr.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_blit_bitmask.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_blit_fifo.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_clock.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_color_decode.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_palette.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_pattern.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_priority.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_timing.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_ram.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_selector.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_shift_buffer.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_sprite.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\video_upscan.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\dvi_tx\dvi_tx.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\board_rev1_tmds.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\nj_v9990_arb.v'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\v9990\v9990_nj.sv'
+Analyzing Verilog file 'D:\proyectosAI\msx\NJ-V9990\src\top.v'
+Compiling module 'top'("D:\proyectosAI\msx\NJ-V9990\src\top.v":1)
+Compiling module 'clockdiv(CLK_HZ=108000000,OUT_HZ=1542857)'("D:\proyectosAI\msx\NJ-V9990\src\clockdiv.v":33)
+Compiling module 'audio_drive'("D:\proyectosAI\msx\NJ-V9990\src\audio_drive.v":1)
+Compiling module 'rpll_main'("D:\proyectosAI\msx\NJ-V9990\src\rpll\rpll_main.v":10)
+Compiling module 'rpll_video'("D:\proyectosAI\msx\NJ-V9990\src\rpll\rpll_video.v":10)
+Compiling module 'jt49_bus(MUTE_NULL_PERIOD=1'b0)'("D:\proyectosAI\msx\NJ-V9990\src\jt49\hdl\jt49_bus.v":26)
+Compiling module 'jt49(MUTE_NULL_PERIOD=1'b0)'("D:\proyectosAI\msx\NJ-V9990\src\jt49\hdl\jt49.v":24)
+Compiling module 'jt49_cen'("D:\proyectosAI\msx\NJ-V9990\src\jt49\hdl\jt49_cen.v":24)
+Compiling module 'jt49_div(MUTE_NULL_PERIOD=1'b0)'("D:\proyectosAI\msx\NJ-V9990\src\jt49\hdl\jt49_div.v":25)
+Compiling module 'jt49_noise(MUTE_NULL_PERIOD=1'b0)'("D:\proyectosAI\msx\NJ-V9990\src\jt49\hdl\jt49_noise.v":25)
+Compiling module 'jt49_div(W=5,MUTE_NULL_PERIOD=1'b0)'("D:\proyectosAI\msx\NJ-V9990\src\jt49\hdl\jt49_div.v":25)
+Compiling module 'jt49_div(W=16)'("D:\proyectosAI\msx\NJ-V9990\src\jt49\hdl\jt49_div.v":25)
+Compiling module 'jt49_eg'("D:\proyectosAI\msx\NJ-V9990\src\jt49\hdl\jt49_eg.v":24)
+Compiling module 'jt49_exp'("D:\proyectosAI\msx\NJ-V9990\src\jt49\hdl\jt49_exp.v":30)
+Extracting RAM for identifier 'lut'("D:\proyectosAI\msx\NJ-V9990\src\jt49\hdl\jt49_exp.v":37)
+Compiling module 'jt2413'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jt2413.v":22)
+Compiling module 'jtopll_mmr(OPL_TYPE=11)'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopll_mmr.v":21)
+Compiling module 'jtopl_div(OPL_TYPE=11)'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_div.v":22)
+Compiling module 'jtopll_reg'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopll_reg.v":22)
+Compiling module 'jtopl_slot_cnt'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_slot_cnt.v":22)
+Compiling module 'jtopl_sh_rst(width=9,stages=3)'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh_rst.v":22)
+WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh_rst.v":32)
+Compiling module 'jtopll_reg_ch'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopll_reg_ch.v":22)
+Compiling module 'jtopl_lfo'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_lfo.v":27)
+Compiling module 'jtopl_pg'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_pg.v":22)
+Compiling module 'jtopl_noise'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_noise.v":27)
+Compiling module 'jtopl_pg_comb'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_pg_comb.v":22)
+Compiling module 'jtopl_pm'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_pm.v":23)
+Compiling module 'jtopl_pg_inc'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_pg_inc.v":22)
+Compiling module 'jtopl_pg_sum'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_pg_sum.v":26)
+Extracting RAM for identifier 'factor'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_pg_sum.v":37)
+Compiling module 'jtopl_pg_rhy'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_pg_rhy.v":22)
+Compiling module 'jtopl_sh_rst(width=19)'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh_rst.v":22)
+WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh_rst.v":32)
+Compiling module 'jtopl_sh_rst(width=10,stages=2)'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh_rst.v":22)
+WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh_rst.v":32)
+Compiling module 'jtopl_eg'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_eg.v":22)
+Compiling module 'jtopl_eg_cnt'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_eg_cnt.v":22)
+Compiling module 'jtopl_eg_comb'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_eg_comb.v":22)
+Compiling module 'jtopl_eg_ctrl'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_eg_ctrl.v":22)
+Compiling module 'jtopl_eg_step'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_eg_step.v":22)
+Compiling module 'jtopl_eg_pure'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_eg_pure.v":22)
+Compiling module 'jtopl_eg_final'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_eg_final.v":22)
+Extracting RAM for identifier 'ksl_lut'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_eg_final.v":38)
+Compiling module 'jtopl_sh(width=1,stages=18)'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh.v":22)
+Compiling module 'jtopl_sh(width=4,stages=3)'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh.v":22)
+Compiling module 'jtopl_sh(width=3,stages=3)'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh.v":22)
+Compiling module 'jtopl_sh_rst(width=10,stages=15,rstval=1'b1)'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh_rst.v":22)
+WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh_rst.v":32)
+Compiling module 'jtopl_sh_rst(width=3,rstval=1'b1)'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh_rst.v":22)
+WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh_rst.v":32)
+Compiling module 'jtopl_sh_rst(width=1)'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh_rst.v":22)
+WARN  (EX2428) : Cannot index into scalar type parameter/localparam 'rstval'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh_rst.v":32)
+Compiling module 'jtopl_op(OPL_TYPE=11)'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_op.v":26)
+Compiling module 'jtopl_sh(width=9,stages=3)'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh.v":22)
+Compiling module 'jtopl_sh(width=2,stages=3)'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh.v":22)
+Compiling module 'jtopl_sh(width=26,stages=3)'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_sh.v":22)
+Compiling module 'jtopl_logsin'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_logsin.v":26)
+Extracting RAM for identifier 'sinelut'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_logsin.v":33)
+Compiling module 'jtopl_exprom'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_exprom.v":33)
+Extracting RAM for identifier 'explut_jt51'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_exprom.v":41)
+Compiling module 'jtopl_acc'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_acc.v":23)
+Compiling module 'jtopl_single_acc(INW=14,OUTW=16)'("D:\proyectosAI\msx\NJ-V9990\src\jtopl\hdl\jtopl_single_acc.v":26)
+Compiling module 'input_debouncer(WIDTH=3)'("D:\proyectosAI\msx\NJ-V9990\src\input_debouncer.v":1)
+Compiling module 'input_debouncer(WIDTH=8)'("D:\proyectosAI\msx\NJ-V9990\src\input_debouncer.v":1)
+Compiling module 'mp_debouncer'("D:\proyectosAI\msx\NJ-V9990\src\mp_debouncer.v":1)
+Compiling module 'slot_expander'("D:\proyectosAI\msx\NJ-V9990\src\slot_expander.v":1)
+Compiling module 'sdram_startup_test'("D:\proyectosAI\msx\NJ-V9990\src\sdram_startup_test.v":1)
+Compiling module 'sdram_mapper'("D:\proyectosAI\msx\NJ-V9990\src\sdram_mapper.v":1)
+Compiling module 'super_megaram(INCLUDE_SCC=1'b1)'("D:\proyectosAI\msx\NJ-V9990\src\super_megaram.v":1)
+Compiling module 'IKASCC(IMPL_TYPE=1)'("D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC.v":1)
+Compiling module 'IKASCC_vrc_s(RAMCTRL_ASYNC=1)'("D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC_modules\IKASCC_vrc_s.v":1)
+Compiling module 'IKASCC_player_s(RAMCTRL_ASYNC=1)'("D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC_modules\IKASCC_player_s.v":1)
+Compiling module 'IKASCC_player_memory_s'("D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC_modules\IKASCC_player_s.v":670)
+Extracting RAM for identifier 'wavetable_ram'("D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC_modules\IKASCC_player_s.v":694)
+Compiling module 'IKASCC_player_control_s(RAMCTRL_ASYNC=1,ADDR_FREQ_BASE=8'h80,ADDR_VOL=8'h8A,ADDR_MUTE=8'h8F)'("D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC_modules\IKASCC_player_s.v":372)
+Compiling module 'IKASCC_primitive_dncntr'("D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC_modules\IKASCC_primitives.v":1)
+Compiling module 'IKASCC_primitive_dncntr(W=5)'("D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC_modules\IKASCC_primitives.v":1)
+Compiling module 'IKASCC_player_control_s(RAMCTRL_ASYNC=1,ADDR_RAM_BASE=8'h20,ADDR_FREQ_BASE=8'h82,ADDR_VOL=8'h8B,ADDR_MUTE=8'h8F,BIT_MUTE=1)'("D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC_modules\IKASCC_player_s.v":372)
+Compiling module 'IKASCC_player_control_s(RAMCTRL_ASYNC=1,ADDR_RAM_BASE=8'h40,ADDR_FREQ_BASE=8'h84,ADDR_VOL=8'h8C,ADDR_MUTE=8'h8F,BIT_MUTE=2)'("D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC_modules\IKASCC_player_s.v":372)
+Compiling module 'IKASCC_player_control_s(RAMCTRL_ASYNC=1,ADDR_RAM_BASE=8'h60,ADDR_FREQ_BASE=8'h86,ADDR_VOL=8'h8D,ADDR_MUTE=8'h8F,BIT_MUTE=3)'("D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC_modules\IKASCC_player_s.v":372)
+Compiling module 'IKASCC_player_control_s(RAMCTRL_ASYNC=1,ADDR_RAM_BASE=8'h60,ADDR_FREQ_BASE=8'h88,ADDR_VOL=8'h8E,ADDR_MUTE=8'h8F,BIT_MUTE=4)'("D:\proyectosAI\msx\NJ-V9990\src\IKASCC\IKASCC_modules\IKASCC_player_s.v":372)
+Compiling module 'linear_rom'("D:\proyectosAI\msx\NJ-V9990\src\linear_rom.v":1)
+Compiling module 'sd_registers'("D:\proyectosAI\msx\NJ-V9990\src\sd_registers.v":1)
+Compiling module 'dpram(widthad_a=9)'("D:\proyectosAI\msx\NJ-V9990\src\dpram.v":1)
+Extracting RAM for identifier 'mem_r'("D:\proyectosAI\msx\NJ-V9990\src\dpram.v":23)
+Compiling module 'sd_reader'("D:\proyectosAI\msx\NJ-V9990\src\sd_reader.sv":11)
+WARN  (EX3791) : Expression size 5 truncated to fit in target size 4("D:\proyectosAI\msx\NJ-V9990\src\sd_reader.sv":125)
+Compiling module 'sdcmd_ctrl'("D:\proyectosAI\msx\NJ-V9990\src\sdcmd_ctrl.sv":10)
+WARN  (EX3771) : Module instantiation should have an instance name("D:\proyectosAI\msx\NJ-V9990\src\sd_reader.sv":304)
+Compiling module 'sd_crc_16'("D:\proyectosAI\msx\NJ-V9990\src\crc16.v":5)
+Compiling module 'flash_roms'("D:\proyectosAI\msx\NJ-V9990\src\flash_roms.v":1)
+Compiling module 'spi_flash_reader'("D:\proyectosAI\msx\NJ-V9990\src\spi_flash_reader.v":1)
+Compiling module 'cd_demux'("D:\proyectosAI\msx\NJ-V9990\src\cd_demux.v":1)
+Compiling module 'sdram_command_adapter'("D:\proyectosAI\msx\NJ-V9990\src\sdram_command_adapter.v":1)
+Compiling module 'v9990_nj'("D:\proyectosAI\msx\NJ-V9990\src\v9990\v9990_nj.sv":39)
+Compiling module 'T9990'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990.sv":49)
+Compiling module 'T9990_CLOCK(REG=T9990_REGISTER_IF_VDP)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_clock.sv":39)
+Compiling module 'T9990_PORT(CPU_MEM=T9990_CPU_MEM_IF_CPU,P2_CPU_TO_VDP=T9990_P2_CPU_TO_VDP_IF_CPU,P2_VDP_TO_CPU=T9990_P2_VDP_TO_CPU_IF_CPU,STATUS=T9990_STATUS_IF_CPU,REG=T9990_REGISTER_IF_CPU,PAL=T9990_PALETTE_IF_CPU)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_port.sv":351)
+Compiling module 'T9990_TIMING(REG=T9990_REGISTER_IF_VDP,STATUS=T9990_STATUS_IF_TIM,MEM=T9990_MEM_TIMING_TG)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_timing.sv":72)
+Compiling module 'T9990_TIMING_TABLE(REG=T9990_REGISTER_IF_VDP)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_timing.sv":1041)
+Compiling module 'T9990_RAM(TIMING=T9990_MEM_TIMING_RAM,VC_MEM=T9990_VC_MEM_IF_RAM,SP_MEM=T9990_VDP_MEM_IF_RAM,BP_MEM=T9990_VDP_MEM_IF_RAM,PA_MEM=T9990_VDP_MEM_IF_RAM,PB_MEM=T9990_VDP_MEM_IF_RAM)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_ram.sv":256)
+Compiling module 'T9990_URB_RAM_VC(VC_MEM=T9990_VC_MEM_IF_VDP,CPU_MEM=T9990_CPU_MEM_IF_RAM,CMD_MEM=T9990_CMD_MEM_IF_RAM)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_ram.sv":127)
+Compiling module 'T9990_BLIT(CMD_MEM=T9990_CMD_MEM_IF_VDP,P2_CPU_TO_VDP=T9990_P2_CPU_TO_VDP_IF_VDP,P2_VDP_TO_CPU=T9990_P2_VDP_TO_CPU_IF_VDP,REG=T9990_REGISTER_IF_VDP,STATUS=T9990_STATUS_IF_CMD)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_blit.sv":46)
+Compiling module 'T9990_BLIT_FIFO'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_blit_fifo.sv":36)
+Extracting RAM for identifier 'buffer'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_blit_fifo.sv":269)
+Compiling module 'T9990_BLIT_ADDR'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_blit_addr.sv":39)
+Compiling module 'T9990_BLIT_CALC_COUNT'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_blit.sv":1445)
+Compiling module 'T9990_BLIT_BITMASK'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_blit_bitmask.sv":39)
+Compiling module 'T9990_BLIT_BITMASK_2BPP'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_blit_bitmask.sv":108)
+Compiling module 'T9990_BLIT_BITMASK_4BPP'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_blit_bitmask.sv":667)
+Compiling module 'T9990_BLIT_BITMASK_8BPP'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_blit_bitmask.sv":826)
+Compiling module 'T9990_BLIT_BITMASK_16BPP'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_blit_bitmask.sv":881)
+Compiling module 'T9990_SPRITE(REG=T9990_REGISTER_IF_VDP,MEM=T9990_VDP_MEM_IF_VDP)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_sprite.sv":42)
+Compiling module 'T9990_SPRITE_PATTERN'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_sprite.sv":907)
+Compiling module 'T9990_PATTERN(REG=T9990_REGISTER_IF_VDP,MEM=T9990_VDP_MEM_IF_VDP)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_pattern.sv":40)
+Compiling module 'TINY9990_PATTERN_GEN(PAT_ADDR=19'b0000000000000000000,NAME_ADDR=19'b1111100000000000000,REG=T9990_REGISTER_IF_VDP,MEM=T9990_VDP_MEM_IF_VDP)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_pattern.sv":124)
+Compiling module 'T9990_SHIFT_BUFFER(BIT_WIDTH=8)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_shift_buffer.sv":36)
+Extracting RAM for identifier 'buffer'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_shift_buffer.sv":48)
+Compiling module 'T9990_PATTERN(IS_B=1,PAT_ADDR=19'h40000,NAME_ADDR=19'h7E000,REG=T9990_REGISTER_IF_VDP,MEM=T9990_VDP_MEM_IF_VDP)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_pattern.sv":40)
+Compiling module 'TINY9990_PATTERN_GEN(IS_B=1,PAT_ADDR=19'b1000000000000000000,NAME_ADDR=19'b1111110000000000000,REG=T9990_REGISTER_IF_VDP,MEM=T9990_VDP_MEM_IF_VDP)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_pattern.sv":124)
+Compiling module 'T9990_BITMAP(REG=T9990_REGISTER_IF_VDP,MEM=T9990_VDP_MEM_IF_VDP)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_bitmap.sv":39)
+Compiling module 'TINY9990_BITMAP_GEN(REG=T9990_REGISTER_IF_VDP,MEM=T9990_VDP_MEM_IF_VDP)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_bitmap.sv":117)
+Compiling module 'T9990_BITMAP_BUFFER'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_bitmap.sv":475)
+Compiling module 'T9990_BITMAP_MEM'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_bitmap.sv":454)
+Extracting RAM for identifier 'buffer'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_bitmap.sv":464)
+Compiling module 'T9990_SHIFT_BUFFER(BIT_WIDTH=23)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_shift_buffer.sv":36)
+Extracting RAM for identifier 'buffer'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_shift_buffer.sv":48)
+Compiling module 'T9990_PRIORITY'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_priority.sv":39)
+Compiling module 'T9990_PALETTE(PAL=T9990_PALETTE_IF_PAL)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_palette.sv":39)
+Extracting RAM for identifier 'buffer'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_palette.sv":84)
+Compiling module 'T9990_PALETTE_REG'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_palette.sv":156)
+Compiling module 'T9990_COLOR_DECODE(REG=T9990_REGISTER_IF_VDP)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_color_decode.sv":41)
+Compiling module 'T9990_COLOR_DECODE_DELAY'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_color_decode.sv":155)
+Compiling module 'T9990_SELECTOR'("D:\proyectosAI\msx\NJ-V9990\src\v9990\tiny9990\t9990_selector.sv":39)
+Compiling module 'VIDEO_UPSCAN(IN=VIDEO_IF_IN,OUT=VIDEO_IF_OUT)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\video_upscan.sv":61)
+Compiling module 'VIDEO_UPSCAN_STRETCH_BUFFER(ROW_COUNT=3)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\video_upscan.sv":393)
+Compiling module 'VIDEO_UPSCAN_BUFFER(COUNT=16'b0000100100000000)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\video_upscan.sv":1058)
+Compiling module 'BOARD_REV1_TMDS_OUT(IN=VIDEO_IF_IN)'("D:\proyectosAI\msx\NJ-V9990\src\v9990\board_rev1_tmds.sv":53)
+Compiling module 'BOARD_REV1_TMDS_OUT_DELAY'("D:\proyectosAI\msx\NJ-V9990\src\v9990\board_rev1_tmds.sv":218)
+Compiling module 'DVI_TX_Top'("D:\proyectosAI\msx\NJ-V9990\src\v9990\dvi_tx\dvi_tx.v":1044)
+Compiling module '**'("D:\proyectosAI\msx\NJ-V9990\src\v9990\dvi_tx\dvi_tx.v":1043)
+Compiling module 'nj_v9990_arb'("D:\proyectosAI\msx\NJ-V9990\src\v9990\nj_v9990_arb.v":48)
+Compiling module 'sdram'("D:\proyectosAI\msx\NJ-V9990\src\sdram.v":27)
+WARN  (EX3791) : Expression size 16 truncated to fit in target size 15("D:\proyectosAI\msx\NJ-V9990\src\sdram.v":396)
 NOTE  (EX0101) : Current top module is "top"
 [5%] Running netlist conversion ...
+WARN  (CV0016) : Input s2 is unused("D:\proyectosAI\msx\NJ-V9990\src\top.v":9)
 Running device independent optimization ...
-WARN  (DI0002) : Asynchronous register "mask_column0" initial values do not match with the Gowin library, simulation mismatch possible("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":340)
-WARN  (DI0002) : Asynchronous register "spr_address[0]" initial values do not match with the Gowin library, simulation mismatch possible("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":340)
-WARN  (DI0002) : Asynchronous register "spr_address[1]" initial values do not match with the Gowin library, simulation mismatch possible("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":340)
-WARN  (DI0002) : Asynchronous register "spr_address[2]" initial values do not match with the Gowin library, simulation mismatch possible("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":340)
-WARN  (DI0002) : Asynchronous register "spr_address[3]" initial values do not match with the Gowin library, simulation mismatch possible("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":340)
-WARN  (DI0002) : Asynchronous register "spr_address[4]" initial values do not match with the Gowin library, simulation mismatch possible("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":340)
-WARN  (DI0002) : Asynchronous register "spr_address[5]" initial values do not match with the Gowin library, simulation mismatch possible("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":340)
-WARN  (DI0002) : Asynchronous register "spr_address[6]" initial values do not match with the Gowin library, simulation mismatch possible("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":340)
-WARN  (DI0002) : Asynchronous register "bg_address[1]" initial values do not match with the Gowin library, simulation mismatch possible("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":340)
-WARN  (DI0002) : Asynchronous register "bg_address[2]" initial values do not match with the Gowin library, simulation mismatch possible("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":340)
-WARN  (DI0002) : Asynchronous register "bg_address[3]" initial values do not match with the Gowin library, simulation mismatch possible("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":340)
-WARN  (DI0002) : Asynchronous register "display_on" initial values do not match with the Gowin library, simulation mismatch possible("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":340)
-WARN  (DI0002) : Asynchronous register "irq_line_en" initial values do not match with the Gowin library, simulation mismatch possible("/Users/felipe/src/fpga/new-juice/src/SMS/vdp.vhd":340)
 [10%] Optimizing Phase 0 completed
 [15%] Optimizing Phase 1 completed
 [25%] Optimizing Phase 2 completed
@@ -359,19 +254,6 @@ Running technical mapping ...
 [75%] Tech-Mapping Phase 2 completed
 [80%] Tech-Mapping Phase 3 completed
 [90%] Tech-Mapping Phase 4 completed
-WARN  (NL0002) : The module "audio_info_frame" instantiated to "audio_info_frame" is swept in optimizing("/Users/felipe/src/fpga/new-juice/src/hdmi/packet_picker.sv":171)
-WARN  (NL0002) : The module "audio_sample_packet" instantiated to "audio_sample_packet" is swept in optimizing("/Users/felipe/src/fpga/new-juice/src/hdmi/packet_picker.sv":159)
-WARN  (NL0002) : The module "auxiliary_video_information_info_frame" instantiated to "auxiliary_video_information_info_frame" is swept in optimizing("/Users/felipe/src/fpga/new-juice/src/hdmi/packet_picker.sv":165)
-WARN  (NL0002) : The module "source_product_description_info_frame" instantiated to "source_product_description_info_frame" is swept in optimizing("/Users/felipe/src/fpga/new-juice/src/hdmi/packet_picker.sv":168)
-WARN  (NL0002) : The module "jt51_lin2exp" instantiated to "left2exp" is swept in optimizing("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_acc.v":153)
-WARN  (NL0002) : The module "jt51_lin2exp" instantiated to "right2exp" is swept in optimizing("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_acc.v":159)
-WARN  (NL0002) : The module "jt51_sh" instantiated to "u_konsh" is swept in optimizing("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_eg.v":370)
-WARN  (NL0002) : The module "jt51_sh" instantiated to "u_konch" is swept in optimizing("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_kon.v":66)
-WARN  (NL0002) : The module "jt51_mod" instantiated to "u_mod" is swept in optimizing("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_reg.v":196)
-WARN  (NL0002) : The module "jt51_sh" instantiated to "prev1_buffer" is swept in optimizing("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_op.v":69)
-WARN  (NL0002) : The module "jt51_sh" instantiated to "prev2_buffer" is swept in optimizing("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_op.v":85)
-WARN  (NL0002) : The module "jt51_sh" instantiated to "prevprev1_buffer" is swept in optimizing("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_op.v":77)
-WARN  (NL0002) : The module "jt51_phinc_rom" instantiated to "u_phinctable" is swept in optimizing("/Users/felipe/src/fpga/new-juice/src/jt51/hdl/jt51_pg.v":77)
-[95%] Generate netlist file "/Users/felipe/src/fpga/new-juice/impl/gwsynthesis/new-juice.vg" completed
-[100%] Generate report file "/Users/felipe/src/fpga/new-juice/impl/gwsynthesis/new-juice_syn.rpt.html" completed
+[95%] Generate netlist file "D:\proyectosAI\msx\NJ-V9990\impl\gwsynthesis\new-juice.vg" completed
+[100%] Generate report file "D:\proyectosAI\msx\NJ-V9990\impl\gwsynthesis\new-juice_syn.rpt.html" completed
 GowinSynthesis finish

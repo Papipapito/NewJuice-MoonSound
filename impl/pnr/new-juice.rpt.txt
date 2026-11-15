@@ -5,34 +5,34 @@
 1. PnR Messages
 
   <Report Title>: PnR Report
-  <Design File>: C:\Users\alber\proyectosAI\msx\NewJuice-MoonSound\impl\gwsynthesis\new-juice.vg
-  <Physical Constraints File>: C:\Users\alber\proyectosAI\msx\NewJuice-MoonSound\src\top.cst
-  <Timing Constraints File>: C:\Users\alber\proyectosAI\msx\NewJuice-MoonSound\src\top.sdc
+  <Design File>: D:\proyectosAI\msx\NJ-V9990\impl\gwsynthesis\new-juice.vg
+  <Physical Constraints File>: D:\proyectosAI\msx\NJ-V9990\src\top.cst
+  <Timing Constraints File>: D:\proyectosAI\msx\NJ-V9990\src\top.sdc
   <Tool Version>: V1.9.12.03 (64-bit)
   <Part Number>: GW2AR-LV18QN88C8/I7
   <Device>: GW2AR-18
   <Device Version>: C
-  <Created Time>:Fri Oct 16 20:05:34 2026
+  <Created Time>:Sat Nov 14 19:18:01 2026
 
 
 2. PnR Details
 
   Running placement:
-    Placement Phase 0: CPU time = 0h 0m 11s, Elapsed time = 0h 0m 11s
-    Placement Phase 1: CPU time = 0h 0m 0.675s, Elapsed time = 0h 0m 0.675s
+    Placement Phase 0: CPU time = 0h 0m 9s, Elapsed time = 0h 0m 9s
+    Placement Phase 1: CPU time = 0h 0m 0.943s, Elapsed time = 0h 0m 0.944s
     Placement Phase 2: CPU time = 0h 0m 18s, Elapsed time = 0h 0m 18s
-    Placement Phase 3: CPU time = 0h 0m 43s, Elapsed time = 0h 0m 43s
-    Total Placement: CPU time = 0h 1m 13s, Elapsed time = 0h 1m 13s
+    Placement Phase 3: CPU time = 0h 1m 7s, Elapsed time = 0h 1m 7s
+    Total Placement: CPU time = 0h 1m 35s, Elapsed time = 0h 1m 35s
  Running routing:
-    Routing Phase 0: CPU time = 0h 0m 0.01s, Elapsed time = 0h 0m 0.01s
-    Routing Phase 1: CPU time = 0h 0m 0.9s, Elapsed time = 0h 0m 0.9s
-    Routing Phase 2: CPU time = 0h 0m 38s, Elapsed time = 0h 0m 38s
+    Routing Phase 0: CPU time = 0h 0m 0.011s, Elapsed time = 0h 0m 0.011s
+    Routing Phase 1: CPU time = 0h 0m 1s, Elapsed time = 0h 0m 1s
+    Routing Phase 2: CPU time = 0h 1m 47s, Elapsed time = 0h 1m 47s
     Routing Phase 3: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
-    Total Routing: CPU time = 0h 0m 39s, Elapsed time = 0h 0m 39s
+    Total Routing: CPU time = 0h 1m 48s, Elapsed time = 0h 1m 48s
  Generate output files:
-    CPU time = 0h 0m 3s, Elapsed time = 0h 0m 3s
+    CPU time = 0h 0m 4s, Elapsed time = 0h 0m 4s
 
- Total Time and Memory Usage: CPU time = 0h 1m 55s, Elapsed time = 0h 1m 55s, Peak memory usage = 672MB
+ Total Time and Memory Usage: CPU time = 0h 3m 27s, Elapsed time = 0h 3m 27s, Peak memory usage = 677MB
 
 
 3. Resource Usage Summary
@@ -40,32 +40,28 @@
   --------------------------------------------------------------------------------
   Resources                   | Usage                               | Utilization
   --------------------------------------------------------------------------------
-  Logic                       | 18063/20736                         |  88%
-    --LUT,ALU,ROM16           | 16863(14543 LUT, 2320 ALU, 0 ROM16) | -
-    --SSRAM(RAM16)            | 200                                 | -
-  Register                    | 10082/15915                         |  64%
+  Logic                       | 18335/20736                         |  89%
+    --LUT,ALU,ROM16           | 18029(14941 LUT, 3088 ALU, 0 ROM16) | -
+    --SSRAM(RAM16)            | 51                                  | -
+  Register                    | 9060/15915                          |  57%
     --Logic Register as Latch | 0/15552                             |  0%
-    --Logic Register as FF    | 10014/15552                         |  65%
+    --Logic Register as FF    | 9005/15552                          |  58%
     --I/O Register as Latch   | 0/363                               |  0%
-    --I/O Register as FF      | 68/363                              |  19%
-  CLS                         | 10046/10368                         |  97%
+    --I/O Register as FF      | 55/363                              |  16%
+  CLS                         | 10060/10368                         |  98%
   I/O Port                    | 53/66                               |  81%
-  I/O Buf                     | 49                                  | -
-    --Input Buf               | 16                                  | -
+  I/O Buf                     | 48                                  | -
+    --Input Buf               | 15                                  | -
     --Output Buf              | 23                                  | -
     --Inout Buf               | 10                                  | -
-  IOLOGIC                     | 6/121                               | 5%
-    --OSER10                  | 3
-  BSRAM                       | 34/46                               | 74%
-    --SPX9                    | 1
-    --SDPB                    | 14
-    --SDPX9B                  | 6
-    --DPB                     | 1
-    --pROM                    | 11
-    --pROMX9                  | 1
-  DSP                         | 3.5/24                              | 15%
-    --MULT18X18               | 5
-    --MULTALU36X18            | 1
+  IOLOGIC                     | 8/121                               | 7%
+    --OSER10                  | 4
+  BSRAM                       | 27/46                               | 59%
+    --SDPB                    | 6
+    --DPB                     | 15
+    --pROM                    | 6
+  DSP                         | 1/24                                | 5%
+    --MULT18X18               | 2
   ================================================================================
 
 
@@ -91,7 +87,7 @@
   ------------------------------------------
   Clock Resource| Usage         | Utilization 
   ------------------------------------------
-  PRIMARY       | 5/8           | 63%
+  PRIMARY       | 4/8           | 50%
   LW            | 8/8           | 100%
   GCLK_PIN      | 3/5           | 60%
   rPLL          | 2/2           | 100%
@@ -104,18 +100,17 @@
   Signal         | Global Clock   | Location
   -------------------------------------------
   clkin_d        | PRIMARY        |  TR TL BR BL
+  cpu_clkin_d    | PRIMARY        |  TR
   main_clk       | PRIMARY        |  TR TL BR BL
   O_sdram_clk_d  | PRIMARY        |  TR
-  opl4_clk54     | PRIMARY        |  TL BR BL
-  opl4_clk_eng   | PRIMARY        |  TL BR BL
-  cpu_clkin_d    | LW             |  -
   board_reset_release| LW             |  -
   board_enabled  | LW             |  -
   cpu_modules_ready_reg| LW             |  -
-  hdmi_audio_clk_raw| LW             |  -
   n357_7         | LW             |  -
   psg_reset_sync[1]| LW             |  -
   sms_reset_sync[1]| LW             |  -
+  sd_registers_inst/n582_7| LW             |  -
+  v9990_inst/u_vdp/rst_ff| LW             |  -
   video_clk_135_raw| HCLK           | BANK4_BANK5_HCLK1
   ===========================================
 
@@ -144,14 +139,14 @@ hp_ws             | -         | 55/3          | Y          | out   | IOR36[B] | 
 hp_din            | -         | 54/3          | Y          | out   | IOR38[A] | DIN/CLKHOLD_N   | LVCMOS33   | 8     | UP        | NA        | NA         | OFF        | NA         | OFF             | NA            | 3.3       
 hp_bck            | -         | 56/3          | Y          | out   | IOR36[A] | SO/D1           | LVCMOS33   | 8     | UP        | NA        | NA         | OFF        | NA         | OFF             | NA            | 3.3       
 pa_en             | -         | 51/3          | Y          | out   | IOR45[A] | RPLL2_T_in      | LVCMOS33   | 8     | UP        | NA        | NA         | OFF        | NA         | OFF             | NA            | 3.3       
-tmds_clk_p        | tmds_clk_n | 33/5          | Y          | out   | IOB24[A] | -               | LVCMOS33D  | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3       
-tmds_clk_n        | tmds_clk_p | 34/5          | Y          | out   | IOB24[B] | -               | LVCMOS33D  | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3       
-tmds_data_p[0]    | tmds_data_n[0] | 35/4          | Y          | out   | IOB30[A] | GCLKT_4         | LVCMOS33D  | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3       
-tmds_data_p[1]    | tmds_data_n[1] | 37/4          | Y          | out   | IOB34[A] | -               | LVCMOS33D  | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3       
-tmds_data_p[2]    | tmds_data_n[2] | 39/4          | Y          | out   | IOB40[A] | -               | LVCMOS33D  | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3       
-tmds_data_n[0]    | tmds_data_p[0] | 36/4          | Y          | out   | IOB30[B] | GCLKC_4         | LVCMOS33D  | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3       
-tmds_data_n[1]    | tmds_data_p[1] | 38/4          | Y          | out   | IOB34[B] | -               | LVCMOS33D  | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3       
-tmds_data_n[2]    | tmds_data_p[2] | 40/4          | Y          | out   | IOB40[B] | -               | LVCMOS33D  | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3       
+tmds_clk_p        | tmds_clk_n | 33/5          | Y          | out   | IOB24[A] | -               | LVDS25     | 3.5   | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3       
+tmds_clk_n        | tmds_clk_p | 34/5          | Y          | out   | IOB24[B] | -               | LVDS25     | 3.5   | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3       
+tmds_data_p[0]    | tmds_data_n[0] | 35/4          | Y          | out   | IOB30[A] | GCLKT_4         | LVDS25     | 3.5   | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3       
+tmds_data_p[1]    | tmds_data_n[1] | 37/4          | Y          | out   | IOB34[A] | -               | LVDS25     | 3.5   | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3       
+tmds_data_p[2]    | tmds_data_n[2] | 39/4          | Y          | out   | IOB40[A] | -               | LVDS25     | 3.5   | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3       
+tmds_data_n[0]    | tmds_data_p[0] | 36/4          | Y          | out   | IOB30[B] | GCLKC_4         | LVDS25     | 3.5   | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3       
+tmds_data_n[1]    | tmds_data_p[1] | 38/4          | Y          | out   | IOB34[B] | -               | LVDS25     | 3.5   | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3       
+tmds_data_n[2]    | tmds_data_p[2] | 40/4          | Y          | out   | IOB40[B] | -               | LVDS25     | 3.5   | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3       
 int_out           | -         | 73/1          | Y          | out   | IOT40[A] | -               | LVCMOS33   | 8     | UP        | NA        | NA         | OFF        | NA         | NA              | NA            | 3.3       
 busdir_n          | -         | 74/1          | Y          | out   | IOT34[B] | -               | LVCMOS33   | 8     | UP        | NA        | NA         | OFF        | NA         | NA              | NA            | 3.3       
 wait_out          | -         | 42/4          | Y          | out   | IOB42[B] | -               | LVCMOS33   | 8     | DOWN      | NA        | NA         | OFF        | NA         | NA              | NA            | 3.3       
@@ -269,14 +264,14 @@ Loc./Bank| Signal            | Dir.  | Site     | CFG             | IO Type  | D
 30/5     | mp[6]             | in    | IOB14[B] | -               | LVCMOS33 | NA    | UP        | ON        | NONE       | NA         | NA         | NA              | NA            | 3.3  
 31/5     | mp[7]             | in    | IOB18[A] | -               | LVCMOS33 | NA    | UP        | ON        | NONE       | NA         | NA         | NA              | NA            | 3.3  
 32/5     | -                 | in    | IOB18[B] | -               | LVCMOS33 | NA    | UP        | ON        | NONE       | NA         | NA         | NA              | NA            | 3.3  
-33/5     | tmds_clk_p        | out   | IOB24[A] | -               | LVCMOS33D | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
-34/5     | tmds_clk_n        | out   | IOB24[B] | -               | LVCMOS33D | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
-35/4     | tmds_data_p[0]    | out   | IOB30[A] | GCLKT_4         | LVCMOS33D | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
-36/4     | tmds_data_n[0]    | out   | IOB30[B] | GCLKC_4         | LVCMOS33D | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
-37/4     | tmds_data_p[1]    | out   | IOB34[A] | -               | LVCMOS33D | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
-38/4     | tmds_data_n[1]    | out   | IOB34[B] | -               | LVCMOS33D | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
-39/4     | tmds_data_p[2]    | out   | IOB40[A] | -               | LVCMOS33D | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
-40/4     | tmds_data_n[2]    | out   | IOB40[B] | -               | LVCMOS33D | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
+33/5     | tmds_clk_p        | out   | IOB24[A] | -               | LVDS25   | 3.5   | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
+34/5     | tmds_clk_n        | out   | IOB24[B] | -               | LVDS25   | 3.5   | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
+35/4     | tmds_data_p[0]    | out   | IOB30[A] | GCLKT_4         | LVDS25   | 3.5   | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
+36/4     | tmds_data_n[0]    | out   | IOB30[B] | GCLKC_4         | LVDS25   | 3.5   | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
+37/4     | tmds_data_p[1]    | out   | IOB34[A] | -               | LVDS25   | 3.5   | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
+38/4     | tmds_data_n[1]    | out   | IOB34[B] | -               | LVDS25   | 3.5   | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
+39/4     | tmds_data_p[2]    | out   | IOB40[A] | -               | LVDS25   | 3.5   | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
+40/4     | tmds_data_n[2]    | out   | IOB40[B] | -               | LVDS25   | 3.5   | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
 42/4     | wait_out          | out   | IOB42[B] | -               | LVCMOS33 | 8     | DOWN      | NA        | NA         | OFF        | NA         | NA              | NA            | 3.3  
 41/4     | cd[1]             | io    | IOB43[A] | -               | LVCMOS33 | 8     | UP        | NA        | NONE       | OFF        | NA         | NA              | NA            | 3.3  
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
